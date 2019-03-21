@@ -4,7 +4,8 @@
   "description": "Stable stream implementation that is 95% compatible with Node.js",
   "main": "index.js",
   "dependencies": {
-    "fast-fifo": "^1.0.0"
+    "fast-fifo": "^1.0.0",
+    "nanoassert": "^2.0.0"
   },
   "devDependencies": {},
   "repository": {

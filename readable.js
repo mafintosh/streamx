@@ -1,5 +1,5 @@
 const FIFO = require('fast-fifo')
-const assert = require('assert')
+const assert = require('nanoassert')
 const { EventEmitter } = require('events')
 
 const READABLE             = 0b100000000
