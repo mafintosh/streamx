@@ -71,11 +71,14 @@ class ReadableState {
   }
 
   shift () {
-    if (!this.buffered) return null
+    if (this.buffered === 0) return null
 
     const data = this.queue.shift()
+
     this.buffered -= this.byteLength(data)
-    if (!this.buffered && (this.status & TERMINATED) === 0) this.status &= NOT_READABLE
+    assert(this.buffered >= 0, 'byteLength function is not deterministic')
+
+    if (this.buffered === 0 && (this.status & TERMINATED) === 0) this.status &= NOT_READABLE
     return data
   }
 
