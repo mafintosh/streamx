@@ -1,0 +1,20 @@
+{
+  "name": "stable-stream",
+  "version": "0.0.0",
+  "description": "Stable stream implementation that is 95% compatible with Node.js",
+  "main": "index.js",
+  "dependencies": {
+    "fast-fifo": "^1.0.0"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mafintosh/stable-stream.git"
+  },
+  "author": "Mathias Buus (@mafintosh)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mafintosh/stable-stream/issues"
+  },
+  "homepage": "https://github.com/mafintosh/stable-stream"
+}
