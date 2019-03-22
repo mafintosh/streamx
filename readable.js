@@ -4,35 +4,36 @@ const { EventEmitter } = require('events')
 const { couple } = require('./pipeline')
 const { STREAM_DESTROYED } = require('./errors')
 
-const READABLE             = 0b10000000000
-const NOT_READABLE         = 0b01111111111
-const READING              = 0b01000000000
-const NOT_READING          = 0b10111111111
-const TERMINATED           = 0b00100000000
-const HAS_READER           = 0b00010000000
-const HAS_NO_READER        = 0b11101111111
-const SYNC                 = 0b00001000000
-const NOT_SYNC             = 0b11110111111
-const PIPE_DRAINED         = 0b00000100000
-const PIPE_NOT_DRAINED     = 0b11111011111
-const READ_NEXT_TICK       = 0b00000010000
-const NO_READ_NEXT_TICK    = 0b11111101111
-const RESUMED              = 0b00000001000
-const PAUSED               = 0b11111110111
-const EMITTING_DATA        = 0b00000000100
-const NOT_EMITTING_DATA    = 0b11111111011
-const DESTROYED            = 0b00000000010
-const EMITTED_END          = 0b00000000001
+/* eslint-disable no-multi-spaces */
+const READABLE          = 0b10000000000
+const NOT_READABLE      = 0b01111111111
+const READING           = 0b01000000000
+const NOT_READING       = 0b10111111111
+const ENDED             = 0b00100000000
+const HAS_READER        = 0b00010000000
+const HAS_NO_READER     = 0b11101111111
+const SYNC              = 0b00001000000
+const NOT_SYNC          = 0b11110111111
+const PIPE_DRAINED      = 0b00000100000
+const PIPE_NOT_DRAINED  = 0b11111011111
+const READ_NEXT_TICK    = 0b00000010000
+const NO_READ_NEXT_TICK = 0b11111101111
+const RESUMED           = 0b00000001000
+const PAUSED            = 0b11111110111
+const EMITTING_DATA     = 0b00000000100
+const NOT_EMITTING_DATA = 0b11111111011
+const DESTROYED         = 0b00000000010
+const EMITTED_END       = 0b00000000001
 
 const FLOWING = HAS_READER | PIPE_DRAINED | RESUMED
-const READABLE_AND_TERMINATED = READABLE | TERMINATED
+const READABLE_AND_ENDED = READABLE | ENDED
 const READABLE_AND_DESTROYED = READABLE | DESTROYED
-const SHOULD_NOT_READ = READING | TERMINATED | DESTROYED
+const SHOULD_NOT_READ = READING | ENDED | DESTROYED
 const READING_AND_SYNC = READING | SYNC
 const DESTROYED_AND_ENDED = DESTROYED | EMITTED_END
 
 class ReadableState {
-  constructor (stream, { highWaterMark = 16384, byteLength, map } = {}) {
+  constructor (stream, { highWaterMark = 16384, byteLength, map = null, mapReadable = null } = {}) {
     this.readers = null
     this.pipeTo = null
     this.queue = new FIFO()
@@ -40,7 +41,7 @@ class ReadableState {
     this.status = 0
     this.highWaterMark = highWaterMark
     this.byteLength = byteLength || defaultByteLength
-    this.map = map || null
+    this.map = mapReadable || map
     this.afterRead = afterRead.bind(this)
     this.onpipedrain = null
     this.stream = stream
@@ -48,7 +49,7 @@ class ReadableState {
   }
 
   addReader (cb) {
-    if ((this.status & DESTROYED_AND_ENDED) !== 0)  {
+    if ((this.status & DESTROYED_AND_ENDED) !== 0) {
       if ((this.status & EMITTED_END) !== 0) process.nextTick(cb, null, null)
       else process.nextTick(cb, this.error)
       return false
@@ -86,9 +87,9 @@ class ReadableState {
   push (data) {
     if (data === null) {
       this.highWaterMark = 0
-      this.status |= READABLE_AND_TERMINATED
+      this.status |= READABLE_AND_ENDED
     } else {
-      assert((this.status & TERMINATED) === 0, 'Cannot push to a stream after it has been terminated')
+      assert((this.status & ENDED) === 0, 'Cannot push to a stream after it has been ended')
       if (this.map) data = this.map(data)
       this.buffered += this.byteLength(data)
       this.queue.push(data)
@@ -106,7 +107,7 @@ class ReadableState {
     this.buffered -= this.byteLength(data)
     assert(this.buffered >= 0, 'byteLength function is not deterministic')
 
-    if (this.buffered === 0 && (this.status & TERMINATED) === 0) this.status &= NOT_READABLE
+    if (this.buffered === 0 && (this.status & ENDED) === 0) this.status &= NOT_READABLE
     return data
   }
 
