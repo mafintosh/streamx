@@ -51,7 +51,7 @@ class ReadableState {
   addReader (cb) {
     if ((this.status & DESTROYED_AND_ENDED) !== 0) {
       if ((this.status & EMITTED_END) !== 0) process.nextTick(cb, null, null)
-      else process.nextTick(cb, this.error)
+      else process.nextTick(cb, this.error, null)
       return false
     }
 
@@ -220,7 +220,10 @@ module.exports = class ReadableStream extends EventEmitter {
   constructor (opts) {
     super()
     this.readableState = new ReadableState(this, opts)
-    if (opts && opts.read) this._read = opts.read
+    if (opts) {
+      if (opts.read) this._read = opts.read
+      if (opts.destroy) this._destroy = opts.destroy
+    }
   }
 
   get destroyed () {
