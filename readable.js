@@ -1,27 +1,33 @@
 const FIFO = require('fast-fifo')
 const assert = require('nanoassert')
 const { EventEmitter } = require('events')
+const { couple } = require('./pipeline')
+const { STREAM_DESTROYED } = require('./errors')
 
-const READABLE             = 0b100000000
-const NOT_READABLE         = 0b011111111
-const READING              = 0b010000000
-const NOT_READING          = 0b101111111
-const TERMINATED           = 0b001000000
-const HAS_READER           = 0b000100000
-const HAS_NO_READER        = 0b111011111
-const SYNC                 = 0b000010000
-const NOT_SYNC             = 0b111101111
-const PIPE_DRAINED         = 0b000001000
-const PIPE_NOT_DRAINED     = 0b111110111
-const READ_NEXT_TICK       = 0b000000100
-const NO_READ_NEXT_TICK    = 0b111111011
-const RESUMED              = 0b000000010
-const PAUSED               = 0b111111101
-const EMITTING_DATA        = 0b000000001
+const READABLE             = 0b10000000000
+const NOT_READABLE         = 0b01111111111
+const READING              = 0b01000000000
+const NOT_READING          = 0b10111111111
+const TERMINATED           = 0b00100000000
+const HAS_READER           = 0b00010000000
+const HAS_NO_READER        = 0b11101111111
+const SYNC                 = 0b00001000000
+const NOT_SYNC             = 0b11110111111
+const PIPE_DRAINED         = 0b00000100000
+const PIPE_NOT_DRAINED     = 0b11111011111
+const READ_NEXT_TICK       = 0b00000010000
+const NO_READ_NEXT_TICK    = 0b11111101111
+const RESUMED              = 0b00000001000
+const PAUSED               = 0b11111110111
+const EMITTING_DATA        = 0b00000000100
+const NOT_EMITTING_DATA    = 0b11111111011
+const DESTROYED            = 0b00000000010
+const EMITTED_END          = 0b00000000001
 
 const FLOWING = HAS_READER | PIPE_DRAINED | RESUMED
 const READABLE_AND_TERMINATED = READABLE | TERMINATED
-const SHOULD_NOT_READ = READING | TERMINATED
+const READABLE_AND_DESTROYED = READABLE | DESTROYED
+const SHOULD_NOT_READ = READING | TERMINATED | DESTROYED
 const READING_AND_SYNC = READING | SYNC
 
 class ReadableState {
@@ -37,22 +43,43 @@ class ReadableState {
     this.afterRead = afterRead.bind(this)
     this.onpipedrain = null
     this.stream = stream
+    this.error = null
   }
 
   addReader (cb) {
+    if ((this.status & DESTROYED) !== 0)  {
+      if ((this.status & EMITTED_END) !== 0) process.nextTick(cb, null, null)
+      else process.nextTick(cb, this.error)
+      return false
+    }
+
     if (!this.readers) {
       this.readers = []
       this.status |= HAS_READER
     }
+
     this.readers.push(cb)
+    return true
   }
 
-  addPipe (pipeTo) {
+  addPipe (pipeTo, cb) {
     assert(this.pipeTo === null, 'Can only pipe to one stream at the time')
+
+    if ((this.status & DESTROYED) !== 0) {
+      if (pipeTo.destroy) pipeTo.destroy(this.error)
+      process.nextTick(cb, this.error)
+      return false
+    }
+
     this.pipeTo = pipeTo
     this.status |= PIPE_DRAINED
     this.onpipedrain = onpipedrain.bind(this)
     this.pipeTo.on('drain', this.onpipedrain)
+
+    // couple the streams ...
+    couple(this, pipeTo, cb)
+
+    return true
   }
 
   push (data) {
@@ -82,16 +109,26 @@ class ReadableState {
     return data
   }
 
+  unshift (data) {
+    let tail
+    const pending = []
+
+    while ((tail === this.queue.shift()) !== undefined) {
+      pending.push(tail)
+    }
+
+    this.push(data)
+
+    for (let i = 0; i < pending.length; i++) {
+      this.queue.push(pending[i])
+    }
+  }
+
   update () {
-    while ((this.status & READABLE) !== 0 && (this.status & FLOWING) !== 0) {
+    while ((this.status & READABLE_AND_DESTROYED) === READABLE && (this.status & FLOWING) !== 0) {
       const data = this.shift()
 
-      if (this.readers !== null) {
-        const readers = this.readers
-        this.status &= HAS_NO_READER
-        this.readers = null
-        for (let i = 0; i < readers.length; i++) readers[i](null, data)
-      }
+      if (this.readers !== null) this.drainReaders(data)
 
       if (this.pipeTo !== null) {
         if (data !== null) {
@@ -102,13 +139,27 @@ class ReadableState {
         }
       }
 
-      if (data === null) {
+      if (data === null && (this.status & DESTROYED) === 0) {
+        this.status |= EMITTED_END
         this.stream.emit('end')
         this.destroy(null)
         return
       }
 
       if ((this.status & EMITTING_DATA) !== 0) this.stream.emit('data', data)
+    }
+  }
+
+  drainReaders (data) {
+    const readers = this.readers
+
+    this.status &= HAS_NO_READER
+    this.readers = null
+
+    for (let i = 0; i < readers.length; i++) {
+      const reader = readers[i]
+      if ((this.status & DESTROYED) !== 0) reader(this.error, null)
+      else reader(null, data)
     }
   }
 
@@ -129,8 +180,28 @@ class ReadableState {
   }
 
   destroy (err) {
-    console.log('destroy...')
+    if ((this.status & DESTROYED) !== 0) return
+    this.status |= DESTROYED
+    this.status &= NOT_EMITTING_DATA
+
+    if (this.pipeTo !== null) {
+      this.pipeTo.destroy(err)
+      this.pipeTo = null
+    }
+
+    this.stream._destroy(ondestroy.bind(this))
+    this.error = err || STREAM_DESTROYED // easy way to check if ondestroy is called sync
   }
+}
+
+ReadableState.prototype.STABLE_STREAM = true
+
+function ondestroy (err) {
+  if (this.error === null) return process.nextTick(ondestroy.bind(this), err)
+  if (!err) err = this.error
+  if (err !== STREAM_DESTROYED) this.stream.emit('error', err)
+  this.stream.emit('close')
+  if (this.readers) this.drainReaders(null)
 }
 
 function onpipedrain () {
@@ -139,10 +210,9 @@ function onpipedrain () {
 }
 
 function afterRead (err) {
-  if (err) throw new Error('destroy not yet impl')
-  if (((this.status &= NOT_READING) & SYNC) === 0) this.read()
+  if (err) this.destroy(err)
+  else if (((this.status &= NOT_READING) & SYNC) === 0) this.read()
 }
-
 
 module.exports = class ReadableStream extends EventEmitter {
   constructor (opts) {
@@ -151,14 +221,18 @@ module.exports = class ReadableStream extends EventEmitter {
     if (opts && opts.read) this._read = opts.read
   }
 
+  get destroyed () {
+    return (this.readableState.status & DESTROYED) !== 0
+  }
+
   pipe (dest, cb) {
-    this.readableState.addPipe(dest)
+    if (!this.readableState.addPipe(dest, cb)) return dest
     this.readableState.readNextTick()
     return dest
   }
 
   read (cb) {
-    this.readableState.addReader(cb)
+    if (!this.readableState.addReader(cb)) return
     this.readableState.readNextTick()
   }
 
@@ -175,16 +249,29 @@ module.exports = class ReadableStream extends EventEmitter {
     return this.readableState.push(data)
   }
 
+  unshift (data) {
+    this.readableState.unshift(data)
+  }
+
   on (name, fn) {
-    if (name === 'data') {
+    if (name === 'data' && (this.status & DESTROYED) === 0) {
       this.readableState.status |= EMITTING_DATA
       this.resume()
     }
     super.on(name, fn)
   }
 
+  destroy (err) {
+    this.readableState.destroy(err || null)
+  }
+
   _read (cb) {
     // Overwrite me
+  }
+
+  _destroy (cb) {
+    // Overwrite me
+    process.nextTick(cb, null)
   }
 }
 
