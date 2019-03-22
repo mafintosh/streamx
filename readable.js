@@ -29,6 +29,7 @@ const READABLE_AND_TERMINATED = READABLE | TERMINATED
 const READABLE_AND_DESTROYED = READABLE | DESTROYED
 const SHOULD_NOT_READ = READING | TERMINATED | DESTROYED
 const READING_AND_SYNC = READING | SYNC
+const DESTROYED_AND_ENDED = DESTROYED | EMITTED_END
 
 class ReadableState {
   constructor (stream, { highWaterMark = 16384, byteLength, map } = {}) {
@@ -47,7 +48,7 @@ class ReadableState {
   }
 
   addReader (cb) {
-    if ((this.status & DESTROYED) !== 0)  {
+    if ((this.status & DESTROYED_AND_ENDED) !== 0)  {
       if ((this.status & EMITTED_END) !== 0) process.nextTick(cb, null, null)
       else process.nextTick(cb, this.error)
       return false
