@@ -23,7 +23,7 @@ const NEEDS_DRAIN      = 0b01000000000
 const EMITTING_DRAIN   = 0b10000000000
 
 const NEXT_TICKING_AND_ACTIVE = NEXT_TICKING | ACTIVE
-const FINISHING_AND_QUEUED = FINISHING | QUEUED
+const FINISH_STATUS = FINISHING | QUEUED
 const FINISHED_AND_DESTROYING = FINISHED | DESTROYING
 const ACTIVE_AND_SYNC = ACTIVE | SYNC
 const QUEUED_AND_NEEDS_DRAIN = QUEUED | NEEDS_DRAIN
@@ -111,7 +111,7 @@ class WritableState {
     } else if ((this.status & OPENING) !== 0) {
       this.status |= ACTIVE
       this.stream._open(afterOpen.bind(this))
-    } else if ((this.status & FINISHING_AND_QUEUED) === FINISHING) {
+    } else if ((this.status & FINISH_STATUS) === FINISHING) {
       this.status |= ACTIVE
       this.stream._final(afterFinal.bind(this))
     }

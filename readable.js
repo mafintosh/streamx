@@ -30,7 +30,7 @@ const EMITTING_READABLE = 0b01000000000000
 const EMITTED_READABLE  = 0b10000000000000
 
 const NEXT_TICKING_AND_ACTIVE = NEXT_TICKING | ACTIVE
-const ENDING_AND_QUEUED = ENDING | QUEUED
+const END_STATUS = ENDING | QUEUED | DESTROYING
 const ENDED_AND_DESTROYING = ENDED | DESTROYING
 const ACTIVE_AND_SYNC = ACTIVE | SYNC
 const READABLE_STATUS = EMITTING_READABLE | QUEUED | EMITTED_READABLE
@@ -163,7 +163,7 @@ class ReadableState {
   }
 
   updateNonPrimary () {
-    if ((this.status & ENDING_AND_QUEUED) === ENDING) this.end()
+    if ((this.status & END_STATUS) === ENDING) this.end()
 
     if ((this.status & DESTROYING) !== 0) {
       this.status |= ACTIVE
