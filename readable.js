@@ -84,7 +84,7 @@ class ReadableState {
 
   destroy (err) {
     if (!this.error) this.error = err || STREAM_DESTROYED
-    this.status = (this.stream | DESTROYING) & NON_PRIMARY
+    this.status = (this.status | DESTROYING) & NON_PRIMARY
   }
 
   addPipe (pipeTo, cb) {
