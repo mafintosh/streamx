@@ -5,39 +5,41 @@ const { couple } = require('./pipeline')
 const assert = require('nanoassert')
 
 /* eslint-disable no-multi-spaces */
-const ACTIVE           = 0b0000000000001
-const NOT_ACTIVE       = 0b1111111111110
-const QUEUED           = 0b0000000000010
-const NOT_QUEUED       = 0b1111111111101
-const SYNC             = 0b0000000000100
-const NOT_SYNC         = 0b1111111111011
-const PRIMARY          = 0b0000000001000
-const NON_PRIMARY      = 0b1111111110111
-const NEXT_TICKING     = 0b0000000010000
-const NOT_NEXT_TICKING = 0b1111111101111
-const DESTROYING       = 0b0000000100000
-const ENDING           = 0b0000001000000
-const NOT_ENDING       = 0b1111110111111
-const ENDED            = 0b0000010000000
-const OPENING          = 0b0000100000000
-const NOT_OPENING      = 0b1111011111111
-const RESUMED          = 0b0001000000000
-const PAUSED           = 0b1110111111111
-const EMITTING_DATA    = 0b0010000000000
-const PIPE_DRAINED     = 0b0100000000000
-const PIPE_NOT_DRAINED = 0b1010111111111 // also clears resumed
-const HAS_READER       = 0b1000000000000
-const HAS_NO_READER    = 0b0111111111111
+const ACTIVE            = 0b00000000000001
+const NOT_ACTIVE        = 0b11111111111110
+const QUEUED            = 0b00000000000010
+const NOT_QUEUED        = 0b01111111111101 // also clears emitted readable
+const SYNC              = 0b00000000000100
+const NOT_SYNC          = 0b11111111111011
+const PRIMARY           = 0b00000000001000
+const NON_PRIMARY       = 0b11111111110111
+const NEXT_TICKING      = 0b00000000010000
+const NOT_NEXT_TICKING  = 0b11111111101111
+const DESTROYING        = 0b00000000100000
+const ENDING            = 0b00000001000000
+const NOT_ENDING        = 0b11111110111111
+const ENDED             = 0b00000010000000
+const OPENING           = 0b00000100000000
+const NOT_OPENING       = 0b11111011111111
+const RESUMED           = 0b00001000000000
+const PAUSED            = 0b11110111111111
+const EMITTING_DATA     = 0b00010000000000
+const PIPE_DRAINED      = 0b00100000000000
+const PIPE_NOT_DRAINED  = 0b11010111111111 // also clears resumed
+const EMITTING_READABLE = 0b01000000000000
+const EMITTED_READABLE  = 0b10000000000000
 
 const NEXT_TICKING_AND_ACTIVE = NEXT_TICKING | ACTIVE
 const ENDING_AND_QUEUED = ENDING | QUEUED
 const ENDED_AND_DESTROYING = ENDED | DESTROYING
 const ACTIVE_AND_SYNC = ACTIVE | SYNC
-
+const READABLE_STATUS = EMITTING_READABLE | QUEUED | EMITTED_READABLE
+const EMIT_READABLE = EMITTING_READABLE | QUEUED
 const PRIMARY_AND_ACTIVE = PRIMARY | ACTIVE
 const READ_STATUS = OPENING | DESTROYING | QUEUED | ACTIVE
+const READ_SYNC_STATUS = OPENING | DESTROYING | QUEUED
 const SHOULD_NOT_READ = ACTIVE | OPENING | DESTROYING | ENDING
-const FLOWING = HAS_READER | RESUMED | PIPE_DRAINED
+const FLOWING = RESUMED | PIPE_DRAINED
 
 class ReadableState {
   constructor (stream, { highWaterMark = 16384, byteLength, byteLengthReadable, map = null, mapReadable } = {}) {
@@ -51,7 +53,6 @@ class ReadableState {
     this.error = null
     this.stream = stream
 
-    this.readers = null
     this.pipeTo = null
     this.onpipedrain = null
   }
@@ -60,6 +61,7 @@ class ReadableState {
     if ((this.status & ACTIVE) === 0) this.updateNextTick()
 
     if (data === null) {
+      this.highWaterMark = 0
       this.status = (this.status | ENDING) & NON_PRIMARY
       return false
     }
@@ -85,22 +87,6 @@ class ReadableState {
     this.status = (this.stream | DESTROYING) & NON_PRIMARY
   }
 
-  addReader (cb) {
-    if ((this.status & ENDED_AND_DESTROYING) !== 0) {
-      if ((this.status & ENDED) !== 0) process.nextTick(cb, null, null)
-      else process.nextTick(cb, this.error, null)
-      return false
-    }
-
-    if (!this.readers) {
-      this.readers = []
-      this.status |= HAS_READER
-    }
-
-    this.readers.push(cb)
-    return true
-  }
-
   addPipe (pipeTo, cb) {
     assert(this.pipeTo === null, 'Can only pipe to one stream at the time')
 
@@ -123,22 +109,19 @@ class ReadableState {
     return true
   }
 
-  callReaders (data) {
-    const readers = this.readers
-    this.readers = null
-    this.status &= HAS_NO_READER
-    for (let i = 0; i < readers.length; i++) {
-      const reader = readers[i]
-      if (this.error) reader(this.error, null)
-      else reader(null, data)
+  read () {
+    if ((this.status & READ_SYNC_STATUS) === QUEUED) {
+      const data = this.shift()
+      if ((this.status & EMITTING_DATA) !== 0) this.stream.emit('data', data)
+      return data
     }
+    return null
   }
 
   drain () {
     while ((this.status & READ_STATUS) === QUEUED && (this.status & FLOWING) !== 0) {
       const data = this.shift()
       if ((this.status & EMITTING_DATA) !== 0) this.stream.emit('data', data)
-      if (this.readers !== null) this.callReaders(data)
       if (this.pipeTo !== null && this.pipeTo.write(data) === false) this.status &= PIPE_NOT_DRAINED
     }
   }
@@ -149,7 +132,6 @@ class ReadableState {
     if ((this.status & DESTROYING) === 0) {
       this.status = (this.status & NOT_ENDING) | ENDED_AND_DESTROYING
       this.stream.emit('end')
-      if (this.readers !== null) this.callReaders(null)
       if (this.pipeTo !== null) this.pipeTo.end()
     }
 
@@ -166,6 +148,11 @@ class ReadableState {
       this.status &= NOT_SYNC
     }
 
+    if ((this.status & READABLE_STATUS) === EMIT_READABLE) {
+      this.status |= EMITTED_READABLE
+      this.stream.emit('readable')
+    }
+
     if ((this.status & PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
   }
 
@@ -180,7 +167,6 @@ class ReadableState {
 
     if ((this.status & DESTROYING) !== 0) {
       this.status |= ACTIVE
-      if (this.readers) this.callReaders(null)
       this.stream._destroy(afterDestroy.bind(this))
     } else if ((this.status & OPENING) !== 0) {
       this.status |= ACTIVE
@@ -247,13 +233,16 @@ module.exports = class Readable extends EventEmitter {
       this.readableState.status |= EMITTING_DATA
       this.resume()
     }
+    if (name === 'readable') {
+      this.readableState.status |= EMITTING_READABLE
+      this.readableState.updateNextTick()
+    }
     return super.on(name, fn)
   }
 
-  read (cb) {
-    if (this.readableState.addReader(cb || noop)) {
-      this.readableState.updateNextTick()
-    }
+  read () {
+    this.readableState.updateNextTick()
+    return this.readableState.read()
   }
 
   pipe (dest, cb) {

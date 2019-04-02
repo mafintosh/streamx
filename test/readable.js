@@ -40,7 +40,7 @@ tape('resume', function (t) {
 })
 
 tape('shorthands', function (t) {
-  t.plan(6 + 1)
+  t.plan(3 + 1)
 
   const r = new Readable({
     read (cb) {
@@ -53,17 +53,10 @@ tape('shorthands', function (t) {
     }
   })
 
-  r.read(function (err, data) {
-    t.same(err, null)
-    t.same(data, 'hello')
-    r.read(function (err, data) {
-      t.same(err, null)
-      t.same(data, 'hello')
-      r.destroy()
-      r.read(function (err, data) {
-        t.same(err, new Error('Stream was destroyed'))
-        t.same(data, null)
-      })
-    })
+  r.once('readable', function () {
+    t.same(r.read(), 'hello')
+    t.same(r.read(), 'hello')
+    r.destroy()
+    t.same(r.read(), null)
   })
 })
