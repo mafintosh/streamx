@@ -91,6 +91,7 @@ class WritableState {
     this.highWaterMark = highWaterMark
     this.buffered = 0
     this.error = null
+    this.pipeline = null
     this.byteLength = byteLengthWritable || byteLength || defaultByteLength
     this.map = mapWritable || map
     this.afterWrite = afterWrite.bind(this)
@@ -177,49 +178,6 @@ class WritableState {
   }
 }
 
-class PipeState {
-  constructor (src, dst, cb) {
-    this.pipeFrom = src
-    this.pipeTo = dst
-    this.afterPipe = cb
-    this.error = null
-    this.pipeToFinished = false
-  }
-
-  finished () {
-    this.pipeToFinished = true
-  }
-
-  done (stream, err) {
-    if (err) this.error = err
-
-    if (stream === this.pipeTo) {
-      this.pipeTo = null
-
-      if (this.pipeFrom !== null) {
-        if ((this.pipeFrom.status & READ_DONE) === 0 || !this.pipeToFinished) {
-          this.pipeFrom.destroy(new Error('Writable stream closed prematurely'))
-        }
-        return
-      }
-    }
-
-    if (stream === this.pipeFrom) {
-      this.pipeFrom = null
-
-      if (this.pipeTo !== null) {
-        if ((stream.status & READ_DONE) === 0) {
-          this.pipeTo.destroy(new Error('Readable stream closed before ending'))
-        }
-        return
-      }
-    }
-
-    if (this.afterPipe !== null) this.afterPipe(this.error)
-    this.pipeTo = this.pipeFrom = this.afterPipe = null
-  }
-}
-
 class ReadableState {
   constructor (stream, { highWaterMark = 16384, map = null, mapReadable, byteLength, byteLengthReadable } = {}) {
     this.stream = stream
@@ -227,20 +185,21 @@ class ReadableState {
     this.highWaterMark = highWaterMark
     this.buffered = 0
     this.error = null
+    this.pipeline = null
     this.byteLength = byteLengthReadable || byteLength || defaultByteLength
     this.map = mapReadable || map
-    this.pipe = null
+    this.pipeTo = null
     this.afterRead = afterRead.bind(this)
   }
 
-  pipeTo (pipe, cb) {
+  pipe (pipeTo, cb) {
     this.stream.status |= READ_PIPE_DRAINED
-    this.pipe = pipe
-    this.stream.pipeState = new PipeState(this.stream, pipe, cb || null)
-    if (pipe.pipeState === null) pipe.pipeState = this.stream.pipeState
+    this.pipeTo = pipeTo
+    this.pipeline = new Pipeline(this.stream, pipeTo, cb || null)
+    pipeTo.writableState.pipeline = this.pipeline
 
-    pipe.on('finish', this.stream.pipeState.finished.bind(this.stream.pipeState))
-    pipe.on('drain', afterDrain.bind(this))
+    pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline))
+    pipeTo.on('drain', afterDrain.bind(this))
   }
 
   push (data) {
@@ -277,7 +236,7 @@ class ReadableState {
     if ((stream.status & READ_STATUS) === READ_QUEUED) {
       const data = this.shift()
       if ((stream.status & READ_EMIT_DATA) !== 0) stream.emit('data', data)
-      if (this.pipe !== null && this.pipe.write(data) === false) stream.status &= READ_PIPE_NOT_DRAINED
+      if (this.pipeTo !== null && this.pipeTo.write(data) === false) stream.status &= READ_PIPE_NOT_DRAINED
       return data
     }
 
@@ -290,7 +249,7 @@ class ReadableState {
     while ((stream.status & READ_STATUS) === READ_QUEUED && (stream.status & READ_FLOWING) !== 0) {
       const data = this.shift()
       if ((stream.status & READ_EMIT_DATA) !== 0) stream.emit('data', data)
-      if (this.pipe !== null && this.pipe.write(data) === false) stream.status &= READ_PIPE_NOT_DRAINED
+      if (this.pipeTo !== null && this.pipeTo.write(data) === false) stream.status &= READ_PIPE_NOT_DRAINED
     }
   }
 
@@ -321,7 +280,7 @@ class ReadableState {
       stream.status = (stream.status | READ_DONE) & READ_NOT_ENDING
       stream.emit('end')
       if ((stream.status & AUTO_DESTROY) === DONE) stream.status |= DESTROYING
-      if (this.pipe !== null) this.pipe.end()
+      if (this.pipeTo !== null) this.pipeTo.end()
     }
 
     if ((stream.status & DESTROY_STATUS) === DESTROYING) {
@@ -342,6 +301,49 @@ class ReadableState {
     if ((this.stream.status & READ_NEXT_TICK) !== 0) return
     this.stream.status |= READ_NEXT_TICK
     process.nextTick(updateReadNT, this)
+  }
+}
+
+class Pipeline {
+  constructor (src, dst, cb) {
+    this.from = src
+    this.to = dst
+    this.afterPipe = cb
+    this.error = null
+    this.pipeToFinished = false
+  }
+
+  finished () {
+    this.pipeToFinished = true
+  }
+
+  done (stream, err) {
+    if (err) this.error = err
+
+    if (stream === this.to) {
+      this.to = null
+
+      if (this.from !== null) {
+        if ((this.from.status & READ_DONE) === 0 || !this.pipeToFinished) {
+          this.from.destroy(new Error('Writable stream closed prematurely'))
+        }
+        return
+      }
+    }
+
+    if (stream === this.from) {
+      this.from = null
+
+      if (this.to !== null) {
+        if ((stream.status & READ_DONE) === 0) {
+          this.to.destroy(new Error('Readable stream closed before ending'))
+        }
+        return
+      }
+    }
+
+    if (this.afterPipe !== null) this.afterPipe(this.error)
+    this.to = this.from = this.afterPipe = null
   }
 }
 
@@ -372,7 +374,12 @@ function afterDestroy (err) {
   if (err) stream.emit('error', err)
   stream.status |= DESTROYED
   stream.emit('close')
-  if (stream.pipeState !== null) stream.pipeState.done(stream, err)
+
+  const rs = stream.readableState
+  const ws = stream.writableState
+
+  if (rs !== null && rs.pipeline !== null) rs.pipeline.done(stream, err)
+  if (ws !== null && ws.pipeline !== null) ws.pipeline.done(stream, err)
 }
 
 function afterWrite (err) {
@@ -426,7 +433,6 @@ class Stream extends EventEmitter {
     this.status = 0
     this.readableState = null
     this.writableState = null
-    this.pipeState = null
 
     if (opts) {
       if (opts.open) this._open = opts.open
@@ -505,7 +511,7 @@ class Readable extends Stream {
   }
 
   pipe (dest, cb) {
-    this.readableState.pipeTo(dest, cb)
+    this.readableState.pipe(dest, cb)
     this.readableState.updateNextTick()
     return dest
   }
@@ -619,10 +625,6 @@ class Transform extends Duplex { // WIP
 
 function isStream (stream) {
   return !!stream.readableState || !!stream.writableState
-}
-
-function emitsClose (stream) {
-  return isStableStream(stream)
 }
 
 function isStableStream (stream) {
