@@ -5,7 +5,7 @@ const FIFO = require('fast-fifo')
 
 /* eslint-disable no-multi-spaces */
 
-const MAX = ((1 << 24) - 1)
+const MAX = ((1 << 25) - 1)
 
 // Shared state
 const OPENING     = 0b001
@@ -15,38 +15,41 @@ const DESTROYED   = 0b100
 const NOT_OPENING = MAX ^ OPENING
 
 // Read state
-const READ_ACTIVE           = 0b000000000001 << 3
-const READ_PRIMARY          = 0b000000000010 << 3
-const READ_SYNC             = 0b000000000100 << 3
-const READ_QUEUED           = 0b000000001000 << 3
-const READ_RESUMED          = 0b000000010000 << 3
-const READ_PIPE_DRAINED     = 0b000000100000 << 3
-const READ_ENDING           = 0b000001000000 << 3
-const READ_EMIT_DATA        = 0b000010000000 << 3
-const READ_EMIT_READABLE    = 0b000100000000 << 3
-const READ_EMITTED_READABLE = 0b001000000000 << 3
-const READ_DONE             = 0b010000000000 << 3
-const READ_NEXT_TICK        = 0b100000000001 << 3 // also active
+const READ_ACTIVE           = 0b0000000000001 << 3
+const READ_PRIMARY          = 0b0000000000010 << 3
+const READ_SYNC             = 0b0000000000100 << 3
+const READ_QUEUED           = 0b0000000001000 << 3
+const READ_RESUMED          = 0b0000000010000 << 3
+const READ_PIPE_DRAINED     = 0b0000000100000 << 3
+const READ_ENDING           = 0b0000001000000 << 3
+const READ_EMIT_DATA        = 0b0000010000000 << 3
+const READ_EMIT_READABLE    = 0b0000100000000 << 3
+const READ_EMITTED_READABLE = 0b0001000000000 << 3
+const READ_DONE             = 0b0010000000000 << 3
+const READ_NEXT_TICK        = 0b0100000000001 << 3 // also active
+const READ_NEEDS_PUSH       = 0b1000000000000 << 3
 
-const READ_NOT_ACTIVE       = MAX ^ READ_ACTIVE
-const READ_NON_PRIMARY      = MAX ^ READ_PRIMARY
-const READ_NOT_SYNC         = MAX ^ READ_SYNC
-const READ_PAUSED           = MAX ^ READ_RESUMED
-const READ_NOT_QUEUED       = MAX ^ (READ_QUEUED | READ_EMITTED_READABLE)
-const READ_NOT_ENDING       = MAX ^ READ_ENDING
-const READ_PIPE_NOT_DRAINED = MAX ^ (READ_RESUMED | READ_PIPE_DRAINED)
-const READ_NOT_NEXT_TICK    = MAX ^ READ_NEXT_TICK
+const READ_NOT_ACTIVE             = MAX ^ READ_ACTIVE
+const READ_NON_PRIMARY            = MAX ^ READ_PRIMARY
+const READ_NON_PRIMARY_AND_PUSHED = MAX ^ (READ_PRIMARY | READ_NEEDS_PUSH)
+const READ_NOT_SYNC               = MAX ^ READ_SYNC
+const READ_PUSHED                 = MAX ^ READ_NEEDS_PUSH
+const READ_PAUSED                 = MAX ^ READ_RESUMED
+const READ_NOT_QUEUED             = MAX ^ (READ_QUEUED | READ_EMITTED_READABLE)
+const READ_NOT_ENDING             = MAX ^ READ_ENDING
+const READ_PIPE_NOT_DRAINED       = MAX ^ (READ_RESUMED | READ_PIPE_DRAINED)
+const READ_NOT_NEXT_TICK          = MAX ^ READ_NEXT_TICK
 
 // Write state
-const WRITE_ACTIVE     = 0b000000001 << 15
-const WRITE_PRIMARY    = 0b000000010 << 15
-const WRITE_SYNC       = 0b000000100 << 15
-const WRITE_QUEUED     = 0b000001000 << 15
-const WRITE_UNDRAINED  = 0b000010000 << 15
-const WRITE_DONE       = 0b000100000 << 15
-const WRITE_EMIT_DRAIN = 0b001000000 << 15
-const WRITE_NEXT_TICK  = 0b010000001 << 15 // also active
-const WRITE_FINISHING  = 0b100000000 << 15
+const WRITE_ACTIVE     = 0b000000001 << 16
+const WRITE_PRIMARY    = 0b000000010 << 16
+const WRITE_SYNC       = 0b000000100 << 16
+const WRITE_QUEUED     = 0b000001000 << 16
+const WRITE_UNDRAINED  = 0b000010000 << 16
+const WRITE_DONE       = 0b000100000 << 16
+const WRITE_EMIT_DRAIN = 0b001000000 << 16
+const WRITE_NEXT_TICK  = 0b010000001 << 16 // also active
+const WRITE_FINISHING  = 0b100000000 << 16
 
 const WRITE_NOT_ACTIVE    = MAX ^ WRITE_ACTIVE
 const WRITE_NOT_SYNC      = MAX ^ WRITE_SYNC
@@ -68,12 +71,12 @@ const NON_PRIMARY = WRITE_NON_PRIMARY & READ_NON_PRIMARY
 const READ_PRIMARY_STATUS = OPEN_STATUS | READ_ENDING | READ_DONE
 const READ_STATUS = OPEN_STATUS | READ_DONE | READ_QUEUED
 const READ_FLOWING = READ_RESUMED | READ_PIPE_DRAINED
-const READ_ACTIVE_AND_SYNC = READ_ACTIVE | READ_SYNC
+const READ_ACTIVE_AND_SYNC_AND_NEEDS_PUSH = READ_ACTIVE | READ_SYNC | READ_NEEDS_PUSH
 const READ_PRIMARY_AND_ACTIVE = READ_PRIMARY | READ_ACTIVE
 const READ_ENDING_STATUS = OPEN_STATUS | READ_ENDING | READ_QUEUED
 const READ_EMIT_READABLE_AND_QUEUED = READ_EMIT_READABLE | READ_QUEUED
 const READ_READABLE_STATUS = OPEN_STATUS | READ_EMIT_READABLE | READ_QUEUED | READ_EMITTED_READABLE
-const SHOULD_NOT_READ = OPEN_STATUS | READ_ACTIVE | READ_ENDING | READ_DONE
+const SHOULD_NOT_READ = OPEN_STATUS | READ_ACTIVE | READ_ENDING | READ_DONE | READ_NEEDS_PUSH
 
 // Combined write state
 const WRITE_PRIMARY_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_DONE
@@ -104,11 +107,11 @@ class WritableState {
     this.queue.push(data)
 
     if (this.buffered < this.highWaterMark) {
-      this.stream.status |= WRITE_QUEUED
+      this.stream._duplexState |= WRITE_QUEUED
       return true
     }
 
-    this.stream.status |= WRITE_QUEUED_AND_UNDRAINED
+    this.stream._duplexState |= WRITE_QUEUED_AND_UNDRAINED
     return false
   }
 
@@ -119,11 +122,11 @@ class WritableState {
     this.buffered -= this.byteLength(data)
 
     if (this.buffered === 0) {
-      if ((stream.status & WRITE_NEEDS_EMIT_DRAIN) !== 0) {
-        stream.status &= WRITE_DRAINED
+      if ((stream._duplexState & WRITE_NEEDS_EMIT_DRAIN) !== 0) {
+        stream._duplexState &= WRITE_DRAINED
         stream.emit('drain')
       } else {
-        stream.status &= WRITE_DRAINED
+        stream._duplexState &= WRITE_DRAINED
       }
     }
 
@@ -132,48 +135,48 @@ class WritableState {
 
   end (data) {
     if (data !== undefined && data !== null) this.push(data)
-    this.stream.status = (this.stream.status | WRITE_FINISHING) & WRITE_NON_PRIMARY
+    this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
   }
 
   update () {
     const stream = this.stream
 
-    while ((stream.status & WRITE_STATUS) === WRITE_QUEUED) {
+    while ((stream._duplexState & WRITE_STATUS) === WRITE_QUEUED) {
       const data = this.shift()
-      stream.status |= WRITE_ACTIVE_AND_SYNC
+      stream._duplexState |= WRITE_ACTIVE_AND_SYNC
       stream._write(data, this.afterWrite)
-      stream.status &= WRITE_NOT_SYNC
+      stream._duplexState &= WRITE_NOT_SYNC
     }
 
-    if ((stream.status & WRITE_PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
+    if ((stream._duplexState & WRITE_PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
   }
 
   updateNonPrimary () {
     const stream = this.stream
 
-    if ((stream.status & WRITE_FINISHING_STATUS) === WRITE_FINISHING) {
-      stream.status = (stream.status | WRITE_ACTIVE) & WRITE_NOT_FINISHING
+    if ((stream._duplexState & WRITE_FINISHING_STATUS) === WRITE_FINISHING) {
+      stream._duplexState = (stream._duplexState | WRITE_ACTIVE) & WRITE_NOT_FINISHING
       stream._final(afterFinal.bind(this))
       return
     }
 
-    if ((stream.status & DESTROY_STATUS) === DESTROYING) {
-      if ((stream.status & ACTIVE) === 0) {
-        stream.status |= ACTIVE
+    if ((stream._duplexState & DESTROY_STATUS) === DESTROYING) {
+      if ((stream._duplexState & ACTIVE) === 0) {
+        stream._duplexState |= ACTIVE
         stream._destroy(afterDestroy.bind(this))
       }
       return
     }
 
-    if ((stream.status & OPEN_STATUS) === OPENING) {
-      stream.status = (stream.status | ACTIVE) & NOT_OPENING
+    if ((stream._duplexState & OPEN_STATUS) === OPENING) {
+      stream._duplexState = (stream._duplexState | ACTIVE) & NOT_OPENING
       stream._open(afterOpen.bind(this))
     }
   }
 
   updateNextTick () {
-    if ((this.stream.status & WRITE_NEXT_TICK) !== 0) return
-    this.stream.status |= WRITE_NEXT_TICK
+    if ((this.stream._duplexState & WRITE_NEXT_TICK) !== 0) return
+    this.stream._duplexState |= WRITE_NEXT_TICK
     process.nextTick(updateWriteNT, this)
   }
 }
@@ -193,10 +196,10 @@ class ReadableState {
   }
 
   pipe (pipeTo, cb) {
-    this.stream.status |= READ_PIPE_DRAINED
+    this.stream._duplexState |= READ_PIPE_DRAINED
     this.pipeTo = pipeTo
     this.pipeline = new Pipeline(this.stream, pipeTo, cb || null)
-    pipeTo.writableState.pipeline = this.pipeline
+    pipeTo._writableState.pipeline = this.pipeline
 
     pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline))
     pipeTo.on('drain', afterDrain.bind(this))
@@ -205,11 +208,11 @@ class ReadableState {
   push (data) {
     const stream = this.stream
 
-    if ((stream.status & READ_ACTIVE) === 0) this.updateNextTick()
+    if ((stream._duplexState & READ_ACTIVE) === 0) this.updateNextTick()
 
     if (data === null) {
       this.highWaterMark = 0
-      stream.status = (stream.status | READ_ENDING) & READ_NON_PRIMARY
+      stream._duplexState = (stream._duplexState | READ_ENDING) & READ_NON_PRIMARY_AND_PUSHED
       return false
     }
 
@@ -217,7 +220,7 @@ class ReadableState {
     this.buffered += this.byteLength(data)
     this.queue.push(data)
 
-    stream.status |= READ_QUEUED
+    stream._duplexState = (stream._duplexState | READ_QUEUED) & READ_PUSHED
 
     return this.buffered < this.highWaterMark
   }
@@ -226,17 +229,17 @@ class ReadableState {
     const data = this.queue.shift()
 
     this.buffered -= this.byteLength(data)
-    if (this.buffered === 0) this.stream.status &= READ_NOT_QUEUED
+    if (this.buffered === 0) this.stream._duplexState &= READ_NOT_QUEUED
     return data
   }
 
   read () {
     const stream = this.stream
 
-    if ((stream.status & READ_STATUS) === READ_QUEUED) {
+    if ((stream._duplexState & READ_STATUS) === READ_QUEUED) {
       const data = this.shift()
-      if ((stream.status & READ_EMIT_DATA) !== 0) stream.emit('data', data)
-      if (this.pipeTo !== null && this.pipeTo.write(data) === false) stream.status &= READ_PIPE_NOT_DRAINED
+      if ((stream._duplexState & READ_EMIT_DATA) !== 0) stream.emit('data', data)
+      if (this.pipeTo !== null && this.pipeTo.write(data) === false) stream._duplexState &= READ_PIPE_NOT_DRAINED
       return data
     }
 
@@ -246,10 +249,10 @@ class ReadableState {
   drain () {
     const stream = this.stream
 
-    while ((stream.status & READ_STATUS) === READ_QUEUED && (stream.status & READ_FLOWING) !== 0) {
+    while ((stream._duplexState & READ_STATUS) === READ_QUEUED && (stream._duplexState & READ_FLOWING) !== 0) {
       const data = this.shift()
-      if ((stream.status & READ_EMIT_DATA) !== 0) stream.emit('data', data)
-      if (this.pipeTo !== null && this.pipeTo.write(data) === false) stream.status &= READ_PIPE_NOT_DRAINED
+      if ((stream._duplexState & READ_EMIT_DATA) !== 0) stream.emit('data', data)
+      if (this.pipeTo !== null && this.pipeTo.write(data) === false) stream._duplexState &= READ_PIPE_NOT_DRAINED
     }
   }
 
@@ -258,49 +261,57 @@ class ReadableState {
 
     this.drain()
 
-    while (this.buffered < this.highWaterMark && (stream.status & SHOULD_NOT_READ) === 0) {
-      stream.status |= READ_ACTIVE_AND_SYNC
+    while (this.buffered < this.highWaterMark && (stream._duplexState & SHOULD_NOT_READ) === 0) {
+      stream._duplexState |= READ_ACTIVE_AND_SYNC_AND_NEEDS_PUSH
       stream._read(this.afterRead)
-      this.drain()
-      stream.status &= READ_NOT_SYNC
+      stream._duplexState &= READ_NOT_SYNC
+      if ((stream._duplexState & READ_ACTIVE) === 0) this.drain()
     }
 
-    if ((stream.status & READ_READABLE_STATUS) === READ_EMIT_READABLE_AND_QUEUED) {
-      stream.status |= READ_EMITTED_READABLE
+    if ((stream._duplexState & READ_READABLE_STATUS) === READ_EMIT_READABLE_AND_QUEUED) {
+      stream._duplexState |= READ_EMITTED_READABLE
       stream.emit('readable')
     }
 
-    if ((stream.status & READ_PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
+    if ((stream._duplexState & READ_PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
   }
 
   updateNonPrimary () {
     const stream = this.stream
 
-    if ((stream.status & READ_ENDING_STATUS) === READ_ENDING) {
-      stream.status = (stream.status | READ_DONE) & READ_NOT_ENDING
+    if ((stream._duplexState & READ_ENDING_STATUS) === READ_ENDING) {
+      stream._duplexState = (stream._duplexState | READ_DONE) & READ_NOT_ENDING
       stream.emit('end')
-      if ((stream.status & AUTO_DESTROY) === DONE) stream.status |= DESTROYING
+      if ((stream._duplexState & AUTO_DESTROY) === DONE) stream._duplexState |= DESTROYING
       if (this.pipeTo !== null) this.pipeTo.end()
     }
 
-    if ((stream.status & DESTROY_STATUS) === DESTROYING) {
-      if ((stream.status & ACTIVE) === 0) {
-        stream.status |= ACTIVE
+    if ((stream._duplexState & DESTROY_STATUS) === DESTROYING) {
+      if ((stream._duplexState & ACTIVE) === 0) {
+        stream._duplexState |= ACTIVE
         stream._destroy(afterDestroy.bind(this))
       }
       return
     }
 
-    if ((stream.status & OPEN_STATUS) === OPENING) {
-      stream.status = (stream.status | ACTIVE) & NOT_OPENING
+    if ((stream._duplexState & OPEN_STATUS) === OPENING) {
+      stream._duplexState = (stream._duplexState | ACTIVE) & NOT_OPENING
       stream._open(afterOpen.bind(this))
     }
   }
 
   updateNextTick () {
-    if ((this.stream.status & READ_NEXT_TICK) !== 0) return
-    this.stream.status |= READ_NEXT_TICK
+    if ((this.stream._duplexState & READ_NEXT_TICK) !== 0) return
+    this.stream._duplexState |= READ_NEXT_TICK
     process.nextTick(updateReadNT, this)
+  }
+}
+
+class TransformState {
+  constructor (stream) {
+    this.data = null
+    this.afterTransform = afterTransform.bind(stream)
+    this.afterFinal = null
   }
 }
 
@@ -324,7 +335,7 @@ class Pipeline {
       this.to = null
 
       if (this.from !== null) {
-        if ((this.from.status & READ_DONE) === 0 || !this.pipeToFinished) {
+        if ((this.from._duplexState & READ_DONE) === 0 || !this.pipeToFinished) {
           this.from.destroy(new Error('Writable stream closed prematurely'))
         }
         return
@@ -335,7 +346,7 @@ class Pipeline {
       this.from = null
 
       if (this.to !== null) {
-        if ((stream.status & READ_DONE) === 0) {
+        if ((stream._duplexState & READ_DONE) === 0) {
           this.to.destroy(new Error('Readable stream closed before ending'))
         }
         return
@@ -348,22 +359,22 @@ class Pipeline {
 }
 
 function afterDrain () {
-  this.stream.status |= READ_PIPE_DRAINED
-  if ((this.stream.status & READ_ACTIVE_AND_SYNC) === 0) this.updateNextTick()
+  this.stream._duplexState |= READ_PIPE_DRAINED
+  if ((this.stream._duplexState & READ_ACTIVE_AND_SYNC) === 0) this.updateNextTick()
 }
 
 function afterFinal (err) {
   const stream = this.stream
   if (err) stream.destroy(err)
-  if ((stream.status & DESTROY_STATUS) === 0) {
-    stream.status |= WRITE_DONE
+  if ((stream._duplexState & DESTROY_STATUS) === 0) {
+    stream._duplexState |= WRITE_DONE
     stream.emit('finish')
   }
-  if ((stream.status & AUTO_DESTROY) === DONE) {
-    stream.status |= DESTROYING
+  if ((stream._duplexState & AUTO_DESTROY) === DONE) {
+    stream._duplexState |= DESTROYING
   }
 
-  stream.status &= WRITE_NOT_ACTIVE
+  stream._duplexState &= WRITE_NOT_ACTIVE
   this.update()
 }
 
@@ -372,11 +383,11 @@ function afterDestroy (err) {
 
   if (!err && this.error !== STREAM_DESTROYED) err = this.error
   if (err) stream.emit('error', err)
-  stream.status |= DESTROYED
+  stream._duplexState |= DESTROYED
   stream.emit('close')
 
-  const rs = stream.readableState
-  const ws = stream.writableState
+  const rs = stream._readableState
+  const ws = stream._writableState
 
   if (rs !== null && rs.pipeline !== null) rs.pipeline.done(stream, err)
   if (ws !== null && ws.pipeline !== null) ws.pipeline.done(stream, err)
@@ -384,23 +395,23 @@ function afterDestroy (err) {
 
 function afterWrite (err) {
   if (err) this.stream.destroy(err)
-  this.stream.status &= WRITE_NOT_ACTIVE
-  if ((this.stream.status & WRITE_SYNC) === 0) this.update()
+  this.stream._duplexState &= WRITE_NOT_ACTIVE
+  if ((this.stream._duplexState & WRITE_SYNC) === 0) this.update()
 }
 
 function afterRead (err) {
   if (err) this.stream.destroy(err)
-  this.stream.status &= READ_NOT_ACTIVE
-  if ((this.stream.status & READ_SYNC) === 0) this.update()
+  this.stream._duplexState &= READ_NOT_ACTIVE
+  if ((this.stream._duplexState & READ_SYNC) === 0) this.update()
 }
 
 function updateReadNT (rs) {
-  rs.stream.status &= READ_NOT_NEXT_TICK
+  rs.stream._duplexState &= READ_NOT_NEXT_TICK
   rs.update()
 }
 
 function updateWriteNT (ws) {
-  ws.stream.status &= WRITE_NOT_NEXT_TICK
+  ws.stream._duplexState &= WRITE_NOT_NEXT_TICK
   ws.update()
 }
 
@@ -409,30 +420,35 @@ function afterOpen (err) {
 
   if (err) stream.destroy(err)
 
-  if ((stream.status & DESTROYING) === 0) {
-    if ((stream.status & READ_PRIMARY_STATUS) === 0) stream.status |= READ_PRIMARY
-    if ((stream.status & WRITE_PRIMARY_STATUS) === 0) stream.status |= WRITE_PRIMARY
+  if ((stream._duplexState & DESTROYING) === 0) {
+    if ((stream._duplexState & READ_PRIMARY_STATUS) === 0) stream._duplexState |= READ_PRIMARY
+    if ((stream._duplexState & WRITE_PRIMARY_STATUS) === 0) stream._duplexState |= WRITE_PRIMARY
     stream.emit('open')
   }
 
-  stream.status &= NOT_ACTIVE
+  stream._duplexState &= NOT_ACTIVE
 
-  if (stream.writableState !== null) {
-    stream.writableState.update()
+  if (stream._writableState !== null) {
+    stream._writableState.update()
   }
 
-  if (stream.readableState !== null) {
-    stream.readableState.update()
+  if (stream._readableState !== null) {
+    stream._readableState.update()
   }
+}
+
+function afterTransform (err, data) {
+  if (data !== undefined && data !== null) this.push(data)
+  this._writableState.afterWrite(err)
 }
 
 class Stream extends EventEmitter {
   constructor (opts) {
     super()
 
-    this.status = 0
-    this.readableState = null
-    this.writableState = null
+    this._duplexState = 0
+    this._readableState = null
+    this._writableState = null
 
     if (opts) {
       if (opts.open) this._open = opts.open
@@ -449,44 +465,44 @@ class Stream extends EventEmitter {
   }
 
   get destroyed () {
-    return (this.status & DESTROYED) !== 0
+    return (this._duplexState & DESTROYED) !== 0
   }
 
   get destroying () {
-    return (this.status & DESTROY_STATUS) !== 0
+    return (this._duplexState & DESTROY_STATUS) !== 0
   }
 
   destroy (err) {
-    if ((this.status & DESTROY_STATUS) === 0) {
+    if ((this._duplexState & DESTROY_STATUS) === 0) {
       if (!err) err = STREAM_DESTROYED
-      this.status = (this.status | DESTROYING) & NON_PRIMARY
-      if (this.readableState !== null) {
-        this.readableState.error = err
-        this.readableState.updateNextTick()
+      this._duplexState = (this._duplexState | DESTROYING) & NON_PRIMARY
+      if (this._readableState !== null) {
+        this._readableState.error = err
+        this._readableState.updateNextTick()
       }
-      if (this.writableState !== null) {
-        this.writableState.error = err
-        this.writableState.updateNextTick()
+      if (this._writableState !== null) {
+        this._writableState.error = err
+        this._writableState.updateNextTick()
       }
     }
   }
 
   on (name, fn) {
-    if (this.readableState !== null) {
+    if (this._readableState !== null) {
       if (name === 'data') {
-        this.status |= (READ_EMIT_DATA | READ_RESUMED)
-        this.readableState.updateNextTick()
+        this._duplexState |= (READ_EMIT_DATA | READ_RESUMED)
+        this._readableState.updateNextTick()
       }
       if (name === 'readable') {
-        this.status |= READ_EMIT_READABLE
-        this.readableState.updateNextTick()
+        this._duplexState |= READ_EMIT_READABLE
+        this._readableState.updateNextTick()
       }
     }
 
-    if (this.writableState !== null) {
+    if (this._writableState !== null) {
       if (name === 'drain') {
-        this.status |= WRITE_EMIT_DRAIN
-        this.writableState.updateNextTick()
+        this._duplexState |= WRITE_EMIT_DRAIN
+        this._writableState.updateNextTick()
       }
     }
 
@@ -498,8 +514,8 @@ class Readable extends Stream {
   constructor (opts) {
     super(opts)
 
-    this.status |= OPENING | WRITE_DONE
-    this.readableState = new ReadableState(this, opts)
+    this._duplexState |= OPENING | WRITE_DONE
+    this._readableState = new ReadableState(this, opts)
 
     if (opts) {
       if (opts.read) this._read = opts.read
@@ -511,28 +527,28 @@ class Readable extends Stream {
   }
 
   pipe (dest, cb) {
-    this.readableState.pipe(dest, cb)
-    this.readableState.updateNextTick()
+    this._readableState.pipe(dest, cb)
+    this._readableState.updateNextTick()
     return dest
   }
 
   read () {
-    this.readableState.updateNextTick()
-    return this.readableState.read()
+    this._readableState.updateNextTick()
+    return this._readableState.read()
   }
 
   push (data) {
-    this.readableState.updateNextTick()
-    return this.readableState.push(data)
+    this._readableState.updateNextTick()
+    return this._readableState.push(data)
   }
 
   resume () {
-    this.status |= READ_RESUMED
-    this.readableState.updateNextTick()
+    this._duplexState |= READ_RESUMED
+    this._readableState.updateNextTick()
   }
 
   pause () {
-    this.status &= READ_PAUSED
+    this._duplexState &= READ_PAUSED
   }
 }
 
@@ -540,8 +556,8 @@ class Writable extends Stream {
   constructor (opts) {
     super()
 
-    this.status |= OPENING | READ_DONE
-    this.writableState = new WritableState(this, opts)
+    this._duplexState |= OPENING | READ_DONE
+    this._writableState = new WritableState(this, opts)
 
     if (opts) {
       if (opts.write) this._write = opts.write
@@ -558,13 +574,13 @@ class Writable extends Stream {
   }
 
   write (data) {
-    this.writableState.updateNextTick()
-    return this.writableState.push(data)
+    this._writableState.updateNextTick()
+    return this._writableState.push(data)
   }
 
   end (data) {
-    this.writableState.updateNextTick()
-    this.writableState.end(data)
+    this._writableState.updateNextTick()
+    this._writableState.end(data)
   }
 }
 
@@ -572,8 +588,8 @@ class Duplex extends Readable { // and Writable
   constructor (opts) {
     super(opts)
 
-    this.status = OPENING
-    this.writableState = new WritableState(this, opts)
+    this._duplexState = OPENING
+    this._writableState = new WritableState(this, opts)
 
     if (opts) {
       if (opts.write) this._write = opts.write
@@ -590,45 +606,74 @@ class Duplex extends Readable { // and Writable
   }
 
   write (data) {
-    this.writableState.updateNextTick()
-    return this.writableState.push(data)
+    this._writableState.updateNextTick()
+    return this._writableState.push(data)
   }
 
   end (data) {
-    this.writableState.updateNextTick()
-    this.writableState.end(data)
+    this._writableState.updateNextTick()
+    this._writableState.end(data)
   }
 }
 
 class Transform extends Duplex { // WIP
   constructor (opts) {
     super(opts)
+    this._transformState = new TransformState(this)
 
     if (opts) {
       if (opts.transform) this._transform = opts.transform
+      if (opts.flush) this._flush = opts.flush
     }
   }
 
   _write (data, cb) {
-
+    if (this._readableState.buffered >= this._readableState.highWaterMark) {
+      this._transformState.data = data
+    } else {
+      this._transform(data, this._transformState.afterTransform)
+    }
   }
 
   _read (cb) {
-
+    if (this._transformState.data !== null) {
+      const data = this._transformState.data
+      this._transformState.data = null
+      cb(null)
+      this._transform(data, this._transformState.afterTransform)
+    } else {
+      cb(null)
+    }
   }
 
   _transform (data, cb) {
-    this.push(data)
-    cb()
+    cb(null, data)
+  }
+
+  _flush (cb) {
+    cb(null)
+  }
+
+  _final (cb) {
+    this._transformState.afterFinal = cb
+    this._flush(transformAfterFlush.bind(this))
   }
 }
 
+function transformAfterFlush (err, data) {
+  const cb = this._transformState.afterFinal
+  if (err) return cb(err)
+  if (data !== null && data !== undefined) this.push(data)
+  this.push(null)
+  cb(null)
+}
+
 function isStream (stream) {
-  return !!stream.readableState || !!stream.writableState
+  return !!stream._readableState || !!stream._writableState
 }
 
 function isStableStream (stream) {
-  return typeof stream.status === 'number' && isStream(stream)
+  return typeof stream._duplexState === 'number' && isStream(stream)
 }
 
 function defaultByteLength (data) {
