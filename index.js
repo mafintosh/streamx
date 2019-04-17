@@ -209,8 +209,6 @@ class ReadableState {
   push (data) {
     const stream = this.stream
 
-    if ((stream._duplexState & READ_ACTIVE) === 0) this.updateNextTick()
-
     if (data === null) {
       this.highWaterMark = 0
       stream._duplexState = (stream._duplexState | READ_ENDING) & READ_NON_PRIMARY_AND_PUSHED
@@ -232,6 +230,21 @@ class ReadableState {
     this.buffered -= this.byteLength(data)
     if (this.buffered === 0) this.stream._duplexState &= READ_NOT_QUEUED
     return data
+  }
+
+  unshift (data) {
+    let tail
+    const pending = []
+
+    while ((tail === this.queue.shift()) !== undefined) {
+      pending.push(tail)
+    }
+
+    this.push(data)
+
+    for (let i = 0; i < pending.length; i++) {
+      this.queue.push(pending[i])
+    }
   }
 
   read () {
@@ -541,6 +554,11 @@ class Readable extends Stream {
   push (data) {
     this._readableState.updateNextTick()
     return this._readableState.push(data)
+  }
+
+  unshift (data) {
+    this._readableState.updateNextTick()
+    return this._readableState.unshift(data)
   }
 
   resume () {
