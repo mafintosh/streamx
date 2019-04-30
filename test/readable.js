@@ -60,3 +60,24 @@ tape('shorthands', function (t) {
     t.same(r.read(), null)
   })
 })
+
+tape('both push and the cb needs to be called for re-reads', function (t) {
+  t.plan(2)
+
+  let once = true
+
+  const r = new Readable({
+    read (cb) {
+      t.ok(once, 'read called once')
+      once = false
+      cb(null)
+    }
+  })
+
+  r.resume()
+
+  setTimeout(function () {
+    once = true
+    r.push('hi')
+  }, 100)
+})
