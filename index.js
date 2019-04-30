@@ -200,8 +200,9 @@ class ReadableState {
     this.stream._duplexState |= READ_PIPE_DRAINED
     this.pipeTo = pipeTo
     this.pipeline = new Pipeline(this.stream, pipeTo, cb || null)
-    pipeTo._writableState.pipeline = this.pipeline
 
+    pipeTo._writableState.pipeline = this.pipeline
+    if (cb) pipeTo.on('error', noop) // We already error handle this so supress crashes
     pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline))
     pipeTo.on('drain', afterDrain.bind(this))
   }
@@ -698,6 +699,8 @@ function isStableStream (stream) {
 function defaultByteLength (data) {
   return Buffer.isBuffer(data) ? data.length : 1024
 }
+
+function noop () {}
 
 module.exports = {
   isStream,
