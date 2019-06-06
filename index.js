@@ -201,9 +201,20 @@ class ReadableState {
     this.pipeTo = pipeTo
     this.pipeline = new Pipeline(this.stream, pipeTo, cb || null)
 
-    pipeTo._writableState.pipeline = this.pipeline
-    if (cb) pipeTo.on('error', noop) // We already error handle this so supress crashes
-    pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline))
+    if (cb) this.stream.on('error', noop) // We already error handle this so supress crashes
+
+    if (isStableStream(pipeTo)) {
+      pipeTo._writableState.pipeline = this.pipeline
+      if (cb) pipeTo.on('error', noop) // We already error handle this so supress crashes
+      pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline)) // TODO: just call finished from pipeTo itself
+    } else {
+      const onerror = this.pipeline.done.bind(this.pipeline, pipeTo)
+      const onclose = this.pipeline.done.bind(this.pipeline, pipeTo, null) // onclose has a weird bool arg
+      pipeTo.on('error', onerror)
+      pipeTo.on('close', onclose)
+      pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline))
+    }
+
     pipeTo.on('drain', afterDrain.bind(this))
   }
 
