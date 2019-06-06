@@ -51,7 +51,7 @@ class FileReadStream extends Readable {
 
     fs.read(this.fd, data, 0, data.length, null, (err, read) => {
       if (err) return cb(err)
-      if (read !== data.length) data = data.slice(0, read) 
+      if (read !== data.length) data = data.slice(0, read)
       this.push(data.length ? data : null)
       cb(null)
     })
@@ -66,7 +66,7 @@ class FileReadStream extends Readable {
 // copy this file as an example
 
 const rs = new FileReadStream(__filename)
-const ws = new FileWriteStream(__filename + '.cpy', 'w')
+const ws = new FileWriteStream(`${__filename}.cpy`, 'w')
 
 rs.pipe(ws, function (err) {
   console.log('file copied', err)
