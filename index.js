@@ -203,7 +203,7 @@ class ReadableState {
 
     if (cb) this.stream.on('error', noop) // We already error handle this so supress crashes
 
-    if (isStableStream(pipeTo)) {
+    if (isStreamx(pipeTo)) {
       pipeTo._writableState.pipeline = this.pipeline
       if (cb) pipeTo.on('error', noop) // We already error handle this so supress crashes
       pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline)) // TODO: just call finished from pipeTo itself
@@ -703,7 +703,7 @@ function isStream (stream) {
   return !!stream._readableState || !!stream._writableState
 }
 
-function isStableStream (stream) {
+function isStreamx (stream) {
   return typeof stream._duplexState === 'number' && isStream(stream)
 }
 
@@ -715,7 +715,7 @@ function noop () {}
 
 module.exports = {
   isStream,
-  isStableStream,
+  isStreamx,
   Stream,
   Writable,
   Readable,
