@@ -1,7 +1,7 @@
 {
-  "name": "stable-stream",
+  "name": "@mafintosh/streamx",
   "version": "0.0.0",
-  "description": "Stable stream implementation that is 95% compatible with Node.js",
+  "description": "Stream implementation that is 95% compatible with Node.js but fixes tons of issues",
   "main": "index.js",
   "dependencies": {
     "fast-fifo": "^1.0.0",
@@ -16,12 +16,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mafintosh/stable-stream.git"
+    "url": "https://github.com/mafintosh/streamx.git"
   },
   "author": "Mathias Buus (@mafintosh)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mafintosh/stable-stream/issues"
+    "url": "https://github.com/mafintosh/streamx/issues"
   },
-  "homepage": "https://github.com/mafintosh/stable-stream"
+  "homepage": "https://github.com/mafintosh/streamx"
 }

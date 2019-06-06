@@ -1,5 +1,5 @@
 const { EventEmitter } = require('events')
-const { STREAM_DESTROYED } = require('./errors')
+const STREAM_DESTROYED = new Error('Stream was destroyed')
 
 const FIFO = require('fast-fifo')
 
