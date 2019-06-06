@@ -1,7 +1,7 @@
 {
   "name": "@mafintosh/streamx",
   "version": "0.0.0",
-  "description": "Stream implementation that is 95% compatible with Node.js but fixes tons of issues",
+  "description": "An iteration of the Node.js core streams with a series of improvements",
   "main": "index.js",
   "dependencies": {
     "fast-fifo": "^1.0.0",

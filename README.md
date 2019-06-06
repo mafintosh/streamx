@@ -1,6 +1,6 @@
 # streamx
 
-An iteration of the Node.js core streams that fixes tons of issues whilst maintaining most backwards compat.
+An iteration of the Node.js core streams with a series of improvements.
 
 ```
 npm install @mafintosh/streamx
@@ -10,7 +10,7 @@ npm install @mafintosh/streamx
 
 #### Proper lifecycle support.
 
-Streams have an `_open` function that is called before anything else and a `_destroy`
+Streams have an `_open` function that is called before any read/write operation and a `_destroy`
 function that is always run as the last part of the stream.
 
 This makes it easy to maintain state.
@@ -39,6 +39,13 @@ an `byteLength` function can be provided as well.
 This is a full rewrite, all contained in one file.
 
 Lots of stream methods are simplified based on how I and devs I work with actually use streams in the wild.
+
+#### Backwards compat
+
+streamx aims to be compatible with Node.js streams whenever it is reasonable to do so.
+
+This means that streamx streams behave a lot like Node.js streams from the outside but still provides the
+improvements above.
 
 ## Usage
 
