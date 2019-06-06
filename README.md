@@ -155,7 +155,12 @@ Pauses the stream. You will only need to call this if you want to pause a resume
 
 #### `rs.resume()`
 
-Will start consuming the stream as fast possible.
+Will start reading data from the stream as fast as possible.
+
+If you do not call this, you need to use the `read()` method to read data or the `pipe()` method to
+pipe the stream somewhere else or the `data` handler.
+
+If none of these option are used the stream will stay paused.
 
 #### `writableStream = rs.pipe(writableStream, [callback])`
 
