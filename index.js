@@ -647,7 +647,7 @@ class Duplex extends Readable { // and Writable
   }
 }
 
-class Transform extends Duplex { // WIP
+class Transform extends Duplex {
   constructor (opts) {
     super(opts)
     this._transformState = new TransformState(this)
