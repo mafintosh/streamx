@@ -1,6 +1,6 @@
 {
   "name": "@mafintosh/streamx",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "An iteration of the Node.js core streams with a series of improvements",
   "main": "index.js",
   "dependencies": {
