@@ -88,6 +88,8 @@ const WRITE_PRIMARY_AND_ACTIVE = WRITE_PRIMARY | WRITE_ACTIVE
 const WRITE_ACTIVE_AND_SYNC = WRITE_ACTIVE | WRITE_SYNC
 const WRITE_FINISHING_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_QUEUED
 
+const asyncIterator = Symbol.asyncIterator || Symbol('asyncIterator')
+
 class WritableState {
   constructor (stream, { highWaterMark = 16384, map = null, mapWritable, byteLength, byteLengthWritable } = {}) {
     this.stream = stream
@@ -580,6 +582,39 @@ class Readable extends Stream {
 
   pause () {
     this._duplexState &= READ_PAUSED
+  }
+
+  [asyncIterator] () {
+    const stream = this
+
+    let error = null
+    let ended = false
+    let promiseResolve
+    let promiseReject
+
+    this.on('error', (err) => { error = err })
+    this.on('end', () => { ended = true })
+    this.on('close', () => call(error, null))
+    this.on('readable', () => call(null, stream.read()))
+
+    return {
+      next () {
+        return new Promise(function (resolve, reject) {
+          promiseResolve = resolve
+          promiseReject = reject
+          const data = stream.read()
+          if (data !== null) call(null, data)
+        })
+      }
+    }
+
+    function call (err, data) {
+      if (promiseReject === null) return
+      if (err) promiseReject(err)
+      else if (data === null && !ended) promiseReject(STREAM_DESTROYED)
+      else promiseResolve({ value: data, done: data === null })
+      promiseReject = promiseResolve = null
+    }
   }
 }
 
