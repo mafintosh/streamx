@@ -6,6 +6,8 @@ An iteration of the Node.js core streams with a series of improvements.
 npm install @mafintosh/streamx
 ```
 
+[![Build Status](https://travis-ci.org/mafintosh/streamx.svg?branch=master)](https://travis-ci.org/mafintosh/streamx)
+
 ## Main improvements from Node.js core stream
 
 #### Proper lifecycle support.
