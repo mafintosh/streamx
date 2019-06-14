@@ -30,11 +30,13 @@ Close is *always* the last event emitted and `destroy` is always ran.
 It also error handles the streams provided and destroys both streams if either
 of them fail.
 
-#### No more object mode
+#### All streams are both binary and object mode streams
 
-Instead a `map` function can be provided to map your input data into buffers
+A `map` function can be provided to map your input data into buffers
 or other formats. To indicate how much buffer space each data item takes
 an `byteLength` function can be provided as well.
+
+This removes the need for two modes of streams.
 
 #### Simplicity
 
