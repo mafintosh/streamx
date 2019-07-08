@@ -3,7 +3,7 @@
 An iteration of the Node.js core streams with a series of improvements.
 
 ```
-npm install @mafintosh/streamx
+npm install streamx
 ```
 
 [![Build Status](https://travis-ci.org/mafintosh/streamx.svg?branch=master)](https://travis-ci.org/mafintosh/streamx)
