@@ -267,12 +267,12 @@ Gracefully end the writable stream. Call this when you no longer want to write t
 
 Once all writes have been fully drained `finish` will be emitted.
 
-#### `ws._flush(callback)`
+#### `ws._final(callback)`
 
 This function is called just before `finish` is emitted, i.e. when all writes have flushed but `ws.end()`
 have been called. Use this to implement any logic that should happen after all writes but before finish.
 
-Can also be set using `options.flush` in the constructor.
+Can also be set using `options.final` in the constructor.
 
 #### `ws.on('finish')`
 
