@@ -620,7 +620,7 @@ class Readable extends Stream {
 
 class Writable extends Stream {
   constructor (opts) {
-    super()
+    super(opts)
 
     this._duplexState |= OPENING | READ_DONE
     this._writableState = new WritableState(this, opts)
