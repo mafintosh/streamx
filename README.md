@@ -206,6 +206,10 @@ Emitted if any of the stream operations fail with an error. `close` is always em
 
 Boolean property indicating wheather or not this stream has been destroyed.
 
+#### `bool = Readable.isBackpressured(rs)`
+
+Static method to check if a readable stream is currently under backpressure.
+
 ## Writable Stream
 
 #### `ws = new stream.Writable([options])`
@@ -305,6 +309,10 @@ Emitted if any of the stream operations fail with an error. `close` is always em
 #### `ws.destroyed`
 
 Boolean property indicating wheather or not this stream has been destroyed.
+
+#### `bool = Writable.isBackpressured(ws)`
+
+Static method to check if a writable stream is currently under backpressure.
 
 ## Duplex Stream
 
