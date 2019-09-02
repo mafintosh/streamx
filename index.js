@@ -481,6 +481,7 @@ class Stream extends EventEmitter {
     if (opts) {
       if (opts.open) this._open = opts.open
       if (opts.destroy) this._destroy = opts.destroy
+      if (opts.predestroy) this._predestroy = opts.predestroy
     }
   }
 
@@ -490,6 +491,10 @@ class Stream extends EventEmitter {
 
   _destroy (cb) {
     cb(null)
+  }
+
+  _predestroy () {
+    // does nothing
   }
 
   get destroyed () {
@@ -504,6 +509,7 @@ class Stream extends EventEmitter {
     if ((this._duplexState & DESTROY_STATUS) === 0) {
       if (!err) err = STREAM_DESTROYED
       this._duplexState = (this._duplexState | DESTROYING) & NON_PRIMARY
+      this._predestroy()
       if (this._readableState !== null) {
         this._readableState.error = err
         this._readableState.updateNextTick()

@@ -145,6 +145,14 @@ Can also be set using `options.destroy` in the constructor.
 Note that the `_destroy` might be called without the open function being called
 in case no read was ever performed on the stream.
 
+#### `rs._predestroy()`
+
+A simple hook that is called as soon as the first `stream.destroy()` call is invoked.
+
+Use this in case you need to cancel pending reads (if possible) instead of waiting for them to finish.
+
+Can also be set using `options.predestroy` in the constructor.
+
 #### `rs.destroy([error])`
 
 Forcefully destroy the stream. Will call `_destroy` as soon as all pending reads have finished.
@@ -239,6 +247,14 @@ Can also be set using `options.destroy` in the constructor.
 
 Note that the `_destroy` might be called without the open function being called
 in case no write was ever performed on the stream.
+
+#### `ws._predestroy()`
+
+A simple hook that is called as soon as the first `stream.destroy()` call is invoked.
+
+Use this in case you need to cancel pending writes (if possible) instead of waiting for them to finish.
+
+Can also be set using `options.predestroy` in the constructor.
 
 #### `ws.destroy([error])`
 
