@@ -54,7 +54,7 @@ improvements above.
 ## Usage
 
 ``` js
-const { Readable } = require('@mafintosh/streamx')
+const { Readable } = require('streamx')
 
 const rs = new Readable({
   read (cb) {
