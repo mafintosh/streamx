@@ -499,6 +499,14 @@ class Stream extends EventEmitter {
     // does nothing
   }
 
+  get readable () {
+    return this._readableState !== null
+  }
+
+  get writable () {
+    return this._writableState !== null
+  }
+
   get destroyed () {
     return (this._duplexState & DESTROYED) !== 0
   }

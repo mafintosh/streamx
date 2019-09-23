@@ -98,7 +98,7 @@ tape('simple pipe', function (t) {
 
     final () {
       t.pass('final called')
-      t.same(buffered, [ 'hello', 'world' ])
+      t.same(buffered, ['hello', 'world'])
       t.end()
     }
   })
@@ -124,7 +124,7 @@ tape('pipe with callback', function (t) {
   r.pipe(w, function (err) {
     t.pass('callback called')
     t.same(err, null)
-    t.same(buffered, [ 'hello', 'world' ])
+    t.same(buffered, ['hello', 'world'])
     t.end()
   })
 

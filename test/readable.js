@@ -14,7 +14,7 @@ tape('ondata', function (t) {
   r.on('end', () => ended++)
   r.on('close', function () {
     t.pass('closed')
-    t.same(buffered, [ 'hello', 'world' ])
+    t.same(buffered, ['hello', 'world'])
     t.same(ended, 1)
     t.ok(r.destroyed)
     t.end()

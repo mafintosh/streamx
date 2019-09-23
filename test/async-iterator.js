@@ -2,7 +2,7 @@ const tape = require('tape')
 const { Readable } = require('../')
 
 tape('streams are async iterators', async function (t) {
-  const data = [ 'a', 'b', 'c', null ]
+  const data = ['a', 'b', 'c', null]
   const expected = data.slice(0)
 
   const r = new Readable({
@@ -16,6 +16,6 @@ tape('streams are async iterators', async function (t) {
     t.same(chunk, expected.shift())
   }
 
-  t.same(expected, [ null ])
+  t.same(expected, [null])
   t.end()
 })
