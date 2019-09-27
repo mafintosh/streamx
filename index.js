@@ -417,18 +417,19 @@ function afterDestroy (err) {
 }
 
 function afterWrite (err) {
-  if (err) this.stream.destroy(err)
+  const stream = this.stream
 
-  this.stream._duplexState &= WRITE_NOT_ACTIVE
+  if (err) stream.destroy(err)
+  stream._duplexState &= WRITE_NOT_ACTIVE
 
-  if ((this.stream._duplexState & WRITE_DRAIN_STATUS) === WRITE_UNDRAINED) {
-    this.stream._duplexState &= WRITE_DRAINED
-    if ((this.stream._duplexState & WRITE_EMIT_DRAIN) === WRITE_EMIT_DRAIN) {
-      this.stream.emit('drain')
+  if ((stream._duplexState & WRITE_DRAIN_STATUS) === WRITE_UNDRAINED) {
+    stream._duplexState &= WRITE_DRAINED
+    if ((stream._duplexState & WRITE_EMIT_DRAIN) === WRITE_EMIT_DRAIN) {
+      stream.emit('drain')
     }
   }
 
-  if ((this.stream._duplexState & WRITE_SYNC) === 0) this.update()
+  if ((stream._duplexState & WRITE_SYNC) === 0) this.update()
 }
 
 function afterRead (err) {
