@@ -21,3 +21,58 @@ tape('opens before writes', function (t) {
   stream.write('data')
   stream.end()
 })
+
+tape('drain', function (t) {
+  const stream = new Writable({
+    highWaterMark: 1,
+    write (data, cb) {
+      cb(null)
+    }
+  })
+
+  t.notOk(stream.write('a'))
+  stream.on('drain', function () {
+    t.pass('drained')
+    t.end()
+  })
+})
+
+tape('drain multi write', function (t) {
+  t.plan(4)
+
+  const stream = new Writable({
+    highWaterMark: 1,
+    write (data, cb) {
+      cb(null)
+    }
+  })
+
+  t.notOk(stream.write('a'))
+  t.notOk(stream.write('a'))
+  t.notOk(stream.write('a'))
+  stream.on('drain', function () {
+    t.pass('drained')
+    t.end()
+  })
+})
+
+tape('drain async write', function (t) {
+  let flushed = false
+
+  const stream = new Writable({
+    highWaterMark: 1,
+    write (data, cb) {
+      setImmediate(function () {
+        flushed = true
+        cb(null)
+      })
+    }
+  })
+
+  t.notOk(stream.write('a'))
+  t.notOk(flushed)
+  stream.on('drain', function () {
+    t.ok(flushed)
+    t.end()
+  })
+})

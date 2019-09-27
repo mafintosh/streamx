@@ -55,7 +55,8 @@ const WRITE_NOT_ACTIVE    = MAX ^ WRITE_ACTIVE
 const WRITE_NOT_SYNC      = MAX ^ WRITE_SYNC
 const WRITE_NON_PRIMARY   = MAX ^ WRITE_PRIMARY
 const WRITE_NOT_FINISHING = MAX ^ WRITE_FINISHING
-const WRITE_DRAINED       = MAX ^ (WRITE_UNDRAINED | WRITE_QUEUED)
+const WRITE_DRAINED       = MAX ^ WRITE_UNDRAINED
+const WRITE_NOT_QUEUED    = MAX ^ WRITE_QUEUED
 const WRITE_NOT_NEXT_TICK = MAX ^ WRITE_NEXT_TICK
 
 // Combined shared state
@@ -83,7 +84,7 @@ const READ_BACKPRESSURE_STATUS = DESTROY_STATUS | READ_ENDING | READ_DONE
 // Combined write state
 const WRITE_PRIMARY_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_DONE
 const WRITE_QUEUED_AND_UNDRAINED = WRITE_QUEUED | WRITE_UNDRAINED
-const WRITE_NEEDS_EMIT_DRAIN = WRITE_UNDRAINED | WRITE_EMIT_DRAIN
+const WRITE_DRAIN_STATUS = WRITE_QUEUED | WRITE_UNDRAINED | OPEN_STATUS | WRITE_ACTIVE
 const WRITE_STATUS = OPEN_STATUS | WRITE_ACTIVE | WRITE_QUEUED
 const WRITE_PRIMARY_AND_ACTIVE = WRITE_PRIMARY | WRITE_ACTIVE
 const WRITE_ACTIVE_AND_SYNC = WRITE_ACTIVE | WRITE_SYNC
@@ -125,15 +126,7 @@ class WritableState {
     const stream = this.stream
 
     this.buffered -= this.byteLength(data)
-
-    if (this.buffered === 0) {
-      if ((stream._duplexState & WRITE_NEEDS_EMIT_DRAIN) !== 0) {
-        stream._duplexState &= WRITE_DRAINED
-        stream.emit('drain')
-      } else {
-        stream._duplexState &= WRITE_DRAINED
-      }
-    }
+    if (this.buffered === 0) stream._duplexState &= WRITE_NOT_QUEUED
 
     return data
   }
@@ -425,7 +418,16 @@ function afterDestroy (err) {
 
 function afterWrite (err) {
   if (err) this.stream.destroy(err)
+
   this.stream._duplexState &= WRITE_NOT_ACTIVE
+
+  if ((this.stream._duplexState & WRITE_DRAIN_STATUS) === WRITE_UNDRAINED) {
+    this.stream._duplexState &= WRITE_DRAINED
+    if ((this.stream._duplexState & WRITE_EMIT_DRAIN) === WRITE_EMIT_DRAIN) {
+      this.stream.emit('drain')
+    }
+  }
+
   if ((this.stream._duplexState & WRITE_SYNC) === 0) this.update()
 }
 
