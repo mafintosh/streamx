@@ -281,6 +281,13 @@ write logic. When done call the callback and the stream will call it again if mo
 
 Can also be set using `options.write` in the constructor.
 
+#### `ws._writev(batch, callback)`
+
+Similar to `_write` but passes an array of all data in the current write buffer instead of the oldest one.
+Useful if the destination you are writing the data to supports batching.
+
+Can also be set using `options.writev` in the constructor.
+
 #### `ws.end()`
 
 Gracefully end the writable stream. Call this when you no longer want to write to the stream.

@@ -84,6 +84,7 @@ const READ_BACKPRESSURE_STATUS = DESTROY_STATUS | READ_ENDING | READ_DONE
 // Combined write state
 const WRITE_PRIMARY_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_DONE
 const WRITE_QUEUED_AND_UNDRAINED = WRITE_QUEUED | WRITE_UNDRAINED
+const WRITE_QUEUED_AND_ACTIVE = WRITE_QUEUED | WRITE_ACTIVE
 const WRITE_DRAIN_STATUS = WRITE_QUEUED | WRITE_UNDRAINED | OPEN_STATUS | WRITE_ACTIVE
 const WRITE_STATUS = OPEN_STATUS | WRITE_ACTIVE | WRITE_QUEUED
 const WRITE_PRIMARY_AND_ACTIVE = WRITE_PRIMARY | WRITE_ACTIVE
@@ -134,6 +135,19 @@ class WritableState {
   end (data) {
     if (data !== undefined && data !== null) this.push(data)
     this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
+  }
+
+  autoBatch (data, cb) {
+    const buffer = []
+    const stream = this.stream
+
+    buffer.push(data)
+    while ((stream._duplexState & WRITE_STATUS) === WRITE_QUEUED_AND_ACTIVE) {
+      buffer.push(stream._writableState.shift())
+    }
+
+    if ((stream._duplexState & OPEN_STATUS) !== 0) return cb(null)
+    stream._writev(buffer, cb)
   }
 
   update () {
@@ -649,13 +663,18 @@ class Writable extends Stream {
     this._writableState = new WritableState(this, opts)
 
     if (opts) {
+      if (opts.writev) this._writev = opts.writev
       if (opts.write) this._write = opts.write
       if (opts.final) this._final = opts.final
     }
   }
 
-  _write (data, cb) {
+  _writev (batch, cb) {
     cb(null)
+  }
+
+  _write (data, cb) {
+    this._writableState.autoBatch(data, cb)
   }
 
   _final (cb) {
@@ -685,13 +704,18 @@ class Duplex extends Readable { // and Writable
     this._writableState = new WritableState(this, opts)
 
     if (opts) {
+      if (opts.writev) this._writev = opts.writev
       if (opts.write) this._write = opts.write
       if (opts.final) this._final = opts.final
     }
   }
 
-  _write (data, cb) {
+  _writev (batch, cb) {
     cb(null)
+  }
+
+  _write (data, cb) {
+    this._writableState.autoBatch(data, cb)
   }
 
   _final (cb) {

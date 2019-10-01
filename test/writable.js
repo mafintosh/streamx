@@ -76,3 +76,28 @@ tape('drain async write', function (t) {
     t.end()
   })
 })
+
+tape('writev', function (t) {
+  const expected = [[], ['ho']]
+
+  const s = new Writable({
+    writev (batch, cb) {
+      t.same(batch, expected.shift())
+      cb(null)
+    }
+  })
+
+  for (let i = 0; i < 100; i++) {
+    expected[0].push('hi-' + i)
+    s.write('hi-' + i)
+  }
+
+  s.on('drain', function () {
+    s.write('ho')
+    s.end()
+  })
+
+  s.on('finish', function () {
+    t.end()
+  })
+})
