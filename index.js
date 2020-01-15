@@ -208,6 +208,8 @@ class ReadableState {
   }
 
   pipe (pipeTo, cb) {
+    if (this.pipeTo !== null) throw new Error('Can only pipe to one destination')
+
     this.stream._duplexState |= READ_PIPE_DRAINED
     this.pipeTo = pipeTo
     this.pipeline = new Pipeline(this.stream, pipeTo, cb || null)
