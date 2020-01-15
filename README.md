@@ -210,7 +210,7 @@ Boolean property indicating wheather or not this stream has been destroyed.
 
 Static method to check if a readable stream is currently under backpressure.
 
-### `stream = Readable.from(arrayOrBufferOrStringOrAsyncIterator)
+#### `stream = Readable.from(arrayOrBufferOrStringOrAsyncIterator)`
 
 Static method to turn an array or buffer or string or AsyncIterator into a readable stream.
 
