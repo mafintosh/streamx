@@ -81,3 +81,39 @@ tape('both push and the cb needs to be called for re-reads', function (t) {
     r.push('hi')
   }, 100)
 })
+
+tape('from array', function (t) {
+  const inc = []
+  const r = Readable.from([1, 2, 3])
+  r.on('data', data => inc.push(data))
+  r.on('end', function () {
+    t.same(inc, [1, 2, 3])
+    t.end()
+  })
+})
+
+tape('from buffer', function (t) {
+  const inc = []
+  const r = Readable.from(Buffer.from('hello'))
+  r.on('data', data => inc.push(data))
+  r.on('end', function () {
+    t.same(inc, [Buffer.from('hello')])
+    t.end()
+  })
+})
+
+tape('from async iterator', function (t) {
+  async function * test () {
+    yield 1
+    yield 2
+    yield 3
+  }
+
+  const inc = []
+  const r = Readable.from(test())
+  r.on('data', data => inc.push(data))
+  r.on('end', function () {
+    t.same(inc, [1, 2, 3])
+    t.end()
+  })
+})

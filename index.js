@@ -620,6 +620,42 @@ class Readable extends Stream {
     this._duplexState &= READ_PAUSED
   }
 
+  static _fromAsyncIterator (ite) {
+    let destroy
+
+    const rs = new Readable({
+      read (cb) {
+        ite.next().then(push).then(cb.bind(null, null)).catch(cb)
+      },
+      predestroy () {
+        destroy = ite.return()
+      },
+      destroy (cb) {
+        destroy.then(cb.bind(null, null)).catch(cb)
+      }
+    })
+
+    return rs
+
+    function push (data) {
+      if (data.done) rs.push(null)
+      else rs.push(data.value)
+    }
+  }
+
+  static from (data) {
+    if (data[asyncIterator]) return this._fromAsyncIterator(data[asyncIterator]())
+    if (!Array.isArray(data)) data = data === undefined ? [] : [data]
+
+    let i = 0
+    return new Readable({
+      read (cb) {
+        this.push(i === data.length ? null : data[i++])
+        cb(null)
+      }
+    })
+  }
+
   static isBackpressured (rs) {
     return (rs._duplexState & READ_BACKPRESSURE_STATUS) !== 0 || rs._readableState.buffered >= rs._readableState.highWaterMark
   }
@@ -638,6 +674,9 @@ class Readable extends Stream {
     this.on('readable', () => call(null, stream.read()))
 
     return {
+      [asyncIterator] () {
+        return this
+      },
       next () {
         return new Promise(function (resolve, reject) {
           promiseResolve = resolve
@@ -645,6 +684,9 @@ class Readable extends Stream {
           const data = stream.read()
           if (data !== null) call(null, data)
         })
+      },
+      return () {
+        stream.destroy()
       }
     }
 
