@@ -51,6 +51,27 @@ streamx aims to be compatible with Node.js streams whenever it is reasonable to 
 This means that streamx streams behave a lot like Node.js streams from the outside but still provides the
 improvements above.
 
+#### Smaller browser footprint
+
+streamx has a much smaller footprint when compiled for the browser:
+
+```
+$ for x in stream{,x}; do echo $x: $(browserify -r $x | wc -c) bytes; done
+stream: 173844 bytes
+streamx: 46943 bytes
+```
+
+With optimizations turned on, the difference is even more stark:
+
+```
+$ for x in stream{,x}; do echo $x: $(browserify -r $x -p tinyify | wc -c) bytes; done
+stream: 62649 bytes
+streamx: 8460 bytes
+$ for x in stream{,x}; do echo $x: $(browserify -r $x -p tinyify | gzip | wc -c) "bytes (gzipped)"; done
+stream: 18053 bytes (gzipped)
+streamx: 2806 bytes (gzipped)
+```
+
 ## Usage
 
 ``` js
