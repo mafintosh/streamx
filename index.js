@@ -822,6 +822,8 @@ class Transform extends Duplex {
   }
 }
 
+class PassThrough extends Transform {}
+
 function transformAfterFlush (err, data) {
   const cb = this._transformState.afterFinal
   if (err) return cb(err)
@@ -851,5 +853,6 @@ module.exports = {
   Writable,
   Readable,
   Duplex,
-  Transform
+  Transform,
+  PassThrough
 }
