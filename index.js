@@ -854,5 +854,6 @@ module.exports = {
   Readable,
   Duplex,
   Transform,
+  // Export PassThrough for compatibility with Node.js core's stream module
   PassThrough
 }
