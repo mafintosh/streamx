@@ -133,7 +133,8 @@ class WritableState {
   }
 
   end (data) {
-    if (data !== undefined && data !== null) this.push(data)
+    if (typeof data === 'function') this.once('finish', data)
+    else if (data !== undefined && data !== null) this.push(data)
     this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
   }
 
