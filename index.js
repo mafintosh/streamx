@@ -107,6 +107,10 @@ class WritableState {
     this.afterWrite = afterWrite.bind(this)
   }
 
+  get ended () {
+    return (this.stream._duplexState & WRITE_DONE) !== 0
+  }
+
   push (data) {
     if (this.map !== null) data = this.map(data)
 
@@ -206,6 +210,10 @@ class ReadableState {
     this.map = mapReadable || map
     this.pipeTo = null
     this.afterRead = afterRead.bind(this)
+  }
+
+  get ended () {
+    return (this.stream._duplexState & READ_DONE) !== 0
   }
 
   pipe (pipeTo, cb) {
@@ -521,11 +529,11 @@ class Stream extends EventEmitter {
   }
 
   get readable () {
-    return this._readableState !== null
+    return this._readableState !== null ? true : undefined
   }
 
   get writable () {
-    return this._writableState !== null
+    return this._writableState !== null ? true : undefined
   }
 
   get destroyed () {
