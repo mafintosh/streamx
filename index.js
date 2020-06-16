@@ -673,14 +673,12 @@ class Readable extends Stream {
     const stream = this
 
     let error = null
-    let ended = false
     let promiseResolve
     let promiseReject
 
     this.on('error', (err) => { error = err })
-    this.on('end', () => { ended = true })
-    this.on('close', () => call(error, null))
     this.on('readable', () => call(null, stream.read()))
+    this.on('close', () => call(error, null))
 
     return {
       [asyncIterator] () {
@@ -692,17 +690,32 @@ class Readable extends Stream {
           promiseReject = reject
           const data = stream.read()
           if (data !== null) call(null, data)
+          else if ((stream._duplexState & DESTROYED) !== 0) call(error, null)
         })
       },
       return () {
-        stream.destroy()
+        return destroy(null)
+      },
+      throw (err) {
+        return destroy(err)
       }
+    }
+
+    function destroy (err) {
+      stream.destroy(err)
+      return new Promise((resolve, reject) => {
+        if (stream._duplexState & DESTROYED) return resolve()
+        stream.once('close', function () {
+          if (err) reject(err)
+          else resolve({ value: undefined, done: true })
+        })
+      })
     }
 
     function call (err, data) {
       if (promiseReject === null) return
       if (err) promiseReject(err)
-      else if (data === null && !ended) promiseReject(STREAM_DESTROYED)
+      else if (data === null && (stream._duplexState & READ_DONE) === 0) promiseReject(STREAM_DESTROYED)
       else promiseResolve({ value: data, done: data === null })
       promiseReject = promiseResolve = null
     }
