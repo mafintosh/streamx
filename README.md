@@ -202,6 +202,10 @@ Emitted when the readable stream has fully closed (i.e. it's destroy function ha
 
 Emitted if any of the stream operations fail with an error. `close` is always emitted right after this.
 
+#### `rs.on('piping', dest)`
+
+Emitted when the readable stream is pipeing to a destination.
+
 #### `rs.destroyed`
 
 Boolean property indicating wheather or not this stream has been destroyed.
@@ -316,6 +320,10 @@ Emitted when the readable stream has fully closed (i.e. it's destroy function ha
 #### `ws.on('error', err)`
 
 Emitted if any of the stream operations fail with an error. `close` is always emitted right after this.
+
+#### `ws.on('pipe', src)`
+
+Emitted when a readable stream is being piped to the writable one.
 
 #### `ws.destroyed`
 

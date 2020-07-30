@@ -238,7 +238,8 @@ class ReadableState {
     }
 
     pipeTo.on('drain', afterDrain.bind(this))
-    this.stream.emit('pipe', pipeTo)
+    this.stream.emit('piping', pipeTo)
+    pipeTo.emit('pipe')
   }
 
   push (data) {
