@@ -67,3 +67,65 @@ tape('throw out of iterator', async function (t) {
 
   t.end()
 })
+
+tape('intertesting timing', async function (t) {
+  const r = new Readable({
+    read (cb) {
+      setImmediate(() => {
+        this.push('b')
+        this.push('c')
+        this.push(null)
+        cb(null)
+      })
+    },
+    destroy (cb) {
+      t.pass('destroying')
+      cb(null)
+    }
+  })
+
+  r.push('a')
+
+  const iterated = []
+
+  for await (const chunk of r) {
+    iterated.push(chunk)
+    await new Promise(resolve => setTimeout(resolve, 10))
+  }
+
+  t.same(iterated, ['a', 'b', 'c'])
+  t.end()
+})
+
+tape('intertesting timing with close', async function (t) {
+  t.plan(3)
+
+  const r = new Readable({
+    read (cb) {
+      setImmediate(() => {
+        this.destroy(new Error('stop'))
+        cb(null)
+      })
+    },
+    destroy (cb) {
+      t.pass('destroying')
+      cb(null)
+    }
+  })
+
+  r.push('a')
+
+  const iterated = []
+
+  try {
+    for await (const chunk of r) {
+      iterated.push(chunk)
+      await new Promise(resolve => setTimeout(resolve, 10))
+    }
+  } catch (err) {
+    t.same(err, new Error('stop'))
+  }
+
+  t.same(iterated, ['a'])
+  t.end()
+})
