@@ -674,12 +674,12 @@ class Readable extends Stream {
     const stream = this
 
     let error = null
-    let promiseResolve
-    let promiseReject
+    let promiseResolve = null
+    let promiseReject = null
 
     this.on('error', (err) => { error = err })
-    this.on('readable', () => call(null, stream.read()))
-    this.on('close', () => call(error, null))
+    this.on('readable', onreadable)
+    this.on('close', onclose)
 
     return {
       [asyncIterator] () {
@@ -690,8 +690,8 @@ class Readable extends Stream {
           promiseResolve = resolve
           promiseReject = reject
           const data = stream.read()
-          if (data !== null) call(null, data)
-          else if ((stream._duplexState & DESTROYED) !== 0) call(error, null)
+          if (data !== null) ondata(data)
+          else if ((stream._duplexState & DESTROYED) !== 0) ondata(null)
         })
       },
       return () {
@@ -700,6 +700,22 @@ class Readable extends Stream {
       throw (err) {
         return destroy(err)
       }
+    }
+
+    function onreadable () {
+      if (promiseResolve !== null) ondata(stream.read())
+    }
+
+    function onclose () {
+      if (promiseResolve !== null) ondata(null)
+    }
+
+    function ondata (data) {
+      if (promiseReject === null) return
+      if (error) promiseReject(error)
+      else if (data === null && (stream._duplexState & READ_DONE) === 0) promiseReject(STREAM_DESTROYED)
+      else promiseResolve({ value: data, done: data === null })
+      promiseReject = promiseResolve = null
     }
 
     function destroy (err) {
@@ -711,14 +727,6 @@ class Readable extends Stream {
           else resolve({ value: undefined, done: true })
         })
       })
-    }
-
-    function call (err, data) {
-      if (promiseReject === null) return
-      if (err) promiseReject(err)
-      else if (data === null && (stream._duplexState & READ_DONE) === 0) promiseReject(STREAM_DESTROYED)
-      else promiseResolve({ value: data, done: data === null })
-      promiseReject = promiseResolve = null
     }
   }
 }
