@@ -5,7 +5,8 @@
   "main": "index.js",
   "dependencies": {
     "fast-fifo": "^1.0.0",
-    "nanoassert": "^2.0.0"
+    "nanoassert": "^2.0.0",
+    "proc-nexttick": "^1.0.0"
   },
   "devDependencies": {
     "end-of-stream": "^1.4.1",

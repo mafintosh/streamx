@@ -2,6 +2,7 @@ const { EventEmitter } = require('events')
 const STREAM_DESTROYED = new Error('Stream was destroyed')
 
 const FIFO = require('fast-fifo')
+const nextTick = require('proc-nexttick')
 
 /* eslint-disable no-multi-spaces */
 
@@ -197,7 +198,7 @@ class WritableState {
   updateNextTick () {
     if ((this.stream._duplexState & WRITE_NEXT_TICK) !== 0) return
     this.stream._duplexState |= WRITE_NEXT_TICK
-    process.nextTick(updateWriteNT, this)
+    nextTick(updateWriteNT, this)
   }
 }
 
@@ -356,7 +357,7 @@ class ReadableState {
   updateNextTick () {
     if ((this.stream._duplexState & READ_NEXT_TICK) !== 0) return
     this.stream._duplexState |= READ_NEXT_TICK
-    process.nextTick(updateReadNT, this)
+    nextTick(updateReadNT, this)
   }
 }
 
