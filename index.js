@@ -67,6 +67,9 @@ const DESTROY_STATUS = DESTROYING | DESTROYED
 const OPEN_STATUS = DESTROY_STATUS | OPENING
 const AUTO_DESTROY = DESTROY_STATUS | DONE
 const NON_PRIMARY = WRITE_NON_PRIMARY & READ_NON_PRIMARY
+const TICKING = (WRITE_NEXT_TICK | READ_NEXT_TICK) & NOT_ACTIVE
+const ACTIVE_OR_TICKING = ACTIVE | TICKING
+const IS_OPENING = OPEN_STATUS | TICKING
 
 // Combined read state
 const READ_PRIMARY_STATUS = OPEN_STATUS | READ_ENDING | READ_DONE
@@ -178,14 +181,14 @@ class WritableState {
     }
 
     if ((stream._duplexState & DESTROY_STATUS) === DESTROYING) {
-      if ((stream._duplexState & ACTIVE) === 0) {
+      if ((stream._duplexState & ACTIVE_OR_TICKING) === 0) {
         stream._duplexState |= ACTIVE
         stream._destroy(afterDestroy.bind(this))
       }
       return
     }
 
-    if ((stream._duplexState & OPEN_STATUS) === OPENING) {
+    if ((stream._duplexState & IS_OPENING) === OPENING) {
       stream._duplexState = (stream._duplexState | ACTIVE) & NOT_OPENING
       stream._open(afterOpen.bind(this))
     }
@@ -337,14 +340,14 @@ class ReadableState {
     }
 
     if ((stream._duplexState & DESTROY_STATUS) === DESTROYING) {
-      if ((stream._duplexState & ACTIVE) === 0) {
+      if ((stream._duplexState & ACTIVE_OR_TICKING) === 0) {
         stream._duplexState |= ACTIVE
         stream._destroy(afterDestroy.bind(this))
       }
       return
     }
 
-    if ((stream._duplexState & OPEN_STATUS) === OPENING) {
+    if ((stream._duplexState & IS_OPENING) === OPENING) {
       stream._duplexState = (stream._duplexState | ACTIVE) & NOT_OPENING
       stream._open(afterOpen.bind(this))
     }
