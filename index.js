@@ -724,7 +724,7 @@ class Readable extends Stream {
     function destroy (err) {
       stream.destroy(err)
       return new Promise((resolve, reject) => {
-        if (stream._duplexState & DESTROYED) return resolve()
+        if (stream._duplexState & DESTROYED) return resolve({ value: undefined, done: true })
         stream.once('close', function () {
           if (err) reject(err)
           else resolve({ value: undefined, done: true })
