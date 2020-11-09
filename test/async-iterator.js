@@ -129,3 +129,20 @@ tape('intertesting timing with close', async function (t) {
   t.same(iterated, ['a'])
   t.end()
 })
+
+tape('cleaning up a closed iterator', async function (t) {
+  const r = new Readable()
+  r.push('a')
+  t.plan(1)
+
+  const fn = async () => {
+    for await (const chunk of r) {
+      r.destroy()
+      await new Promise(resolve => r.once('close', resolve))
+      t.same(chunk, 'a')
+      return
+    }
+  }
+  await fn()
+  t.end()
+})
