@@ -517,6 +517,9 @@ class Stream extends EventEmitter {
       if (opts.open) this._open = opts.open
       if (opts.destroy) this._destroy = opts.destroy
       if (opts.predestroy) this._predestroy = opts.predestroy
+      if (opts.signal) {
+        opts.signal.addEventListener('abort', abort.bind(this))
+      }
     }
   }
 
@@ -885,6 +888,10 @@ function defaultByteLength (data) {
 }
 
 function noop () {}
+
+function abort () {
+  this.destroy(new Error('Stream aborted.'))
+}
 
 module.exports = {
   isStream,
