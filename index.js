@@ -875,7 +875,7 @@ function isStreamx (stream) {
 }
 
 function defaultByteLength (data) {
-  return Buffer.isBuffer(data) ? data.length : 1024
+  return typeof data === 'object' && typeof data.byteLength === 'number' ? data.byteLength : 1024
 }
 
 function noop () {}
