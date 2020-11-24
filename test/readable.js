@@ -133,3 +133,17 @@ tape('from async iterator with highWaterMark', function (t) {
   t.same(r._readableState.highWaterMark, 1)
   t.end()
 })
+
+tape('unshift', async function (t) {
+  const r = new Readable()
+  r.push(1)
+  r.push(2)
+  r.unshift(0)
+  r.push(null)
+  const inc = []
+  for await (const entry of r) {
+    inc.push(entry)
+  }
+  t.same(inc, [0, 1, 2])
+  t.end()
+})
