@@ -72,6 +72,12 @@ stream: 18053 bytes (gzipped)
 streamx: 2806 bytes (gzipped)
 ```
 
+#### AbortSignal support
+
+To make it easier to integrate streams in a `async/await` flow, all streams support a `signal` option
+that accepts a [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) to as an
+alternative means to `.destroy` streams.
+
 ## Usage
 
 ``` js
@@ -103,7 +109,8 @@ Options include:
 {
   highWaterMark: 16384, // max buffer size in bytes
   map: (data) => data, // optional function to map input data
-  byteLength: (data) => size // optional function that calculates the byte size of input data
+  byteLength: (data) => size, // optional function that calculates the byte size of input data
+  signal: abortController.signal // optional AbortSignal that triggers `.destroy` when on `abort`
 }
 ```
 
@@ -251,7 +258,8 @@ Options include:
 {
   highWaterMark: 16384, // max buffer size in bytes
   map: (data) => data, // optional function to map input data
-  byteLength: (data) => size // optional function that calculates the byte size of input data
+  byteLength: (data) => size, // optional function that calculates the byte size of input data
+  signal: abortController.signal // optional AbortSignal that triggers `.destroy` when on `abort`
 }
 ```
 

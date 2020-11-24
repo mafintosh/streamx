@@ -1,5 +1,6 @@
 const tape = require('tape')
 const { Readable } = require('../')
+const { AbortController } = require('abort-controller')
 
 tape('streams are async iterators', async function (t) {
   const data = ['a', 'b', 'c', null]
@@ -144,5 +145,28 @@ tape('cleaning up a closed iterator', async function (t) {
     }
   }
   await fn()
+  t.end()
+})
+
+tape('using abort controller', async function (t) {
+  function createInfinite (signal) {
+    let count = 0
+    const r = new Readable({ signal })
+    r.push(count)
+    const int = setInterval(() => r.push(count++), 5000)
+    r.once('close', () => clearInterval(int))
+    return r
+  }
+  const controller = new AbortController()
+  const inc = []
+  setTimeout(() => controller.abort(), 10)
+  try {
+    for await (const chunk of createInfinite(controller.signal)) {
+      inc.push(chunk)
+    }
+  } catch (err) {
+    t.same(err.message, 'Stream aborted.')
+  }
+  t.same(inc, [0])
   t.end()
 })
