@@ -17,12 +17,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mafintosh/streamx.git"
+    "url": "https://github.com/streamxorg/streamx.git"
   },
   "author": "Mathias Buus (@mafintosh)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mafintosh/streamx/issues"
+    "url": "https://github.com/streamxorg/streamx/issues"
   },
-  "homepage": "https://github.com/mafintosh/streamx"
+  "homepage": "https://github.com/streamxorg/streamx"
 }
