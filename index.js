@@ -875,7 +875,7 @@ function isStreamx (stream) {
 }
 
 function isTypedArray (data) {
-  return typeof data === 'object' && typeof data.byteLength === 'number'
+  return typeof data === 'object' && data !== null && typeof data.byteLength === 'number'
 }
 
 function defaultByteLength (data) {
