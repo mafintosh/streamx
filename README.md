@@ -2,8 +2,8 @@
 
 An iteration of the Node.js core streams with a series of improvements.
 
-```
-npm install streamx
+```sh
+$ npm install streamx
 ```
 
 [![Build Status](https://github.com/streamxorg/streamx/workflows/Build%20Status/badge.svg)](https://github.com/streamxorg/streamx/actions?query=workflow%3A%22Build+Status%22)
@@ -55,7 +55,7 @@ improvements above.
 
 streamx has a much smaller footprint when compiled for the browser:
 
-```
+```sh
 $ for x in stream{,x}; do echo $x: $(browserify -r $x | wc -c) bytes; done
 stream: 173844 bytes
 streamx: 46943 bytes
@@ -63,7 +63,7 @@ streamx: 46943 bytes
 
 With optimizations turned on, the difference is even more stark:
 
-```
+```sh
 $ for x in stream{,x}; do echo $x: $(browserify -r $x -p tinyify | wc -c) bytes; done
 stream: 62649 bytes
 streamx: 8460 bytes
@@ -105,7 +105,7 @@ Create a new readable stream.
 
 Options include:
 
-```
+```js
 {
   highWaterMark: 16384, // max buffer size in bytes
   map: (data) => data, // optional function to map input data
@@ -117,6 +117,12 @@ Options include:
 
 In addition you can pass the `open`, `read`, and `destroy` functions as shorthands in
 the constructor instead of overwrite the methods below.
+
+`open`, `read` and `destroy` have the same signature as the `._open`, `._read` and `._destroy`
+methods but also support async variants. For example: You can pass in `async read() {}` instead
+of `read(cb) {}`
+
+All passed-in functions will be executed with the readable stream as `this`.
 
 The default byteLength function returns the byte length of buffers and `1024`
 for any other object. This means the buffer will contain around 16 non buffers
@@ -263,7 +269,7 @@ Create a new writable stream.
 
 Options include:
 
-```
+```js
 {
   highWaterMark: 16384, // max buffer size in bytes
   map: (data) => data, // optional function to map input data
@@ -272,8 +278,14 @@ Options include:
 }
 ```
 
-In addition you can pass the `open`, `write`, `final`, and `destroy` functions as shorthands in
-the constructor instead of overwrite the methods below.
+In addition you can pass the `open`, `write`, `writev`, `final`, and `destroy` functions as
+shorthands in the constructor instead of overwrite the methods below.
+
+`open`, `write`, `writev`, `final` and `destroy` have the same signature as the `._open`,
+`._write`, `._writev`. `._final` and `._destroy` methods but also support async variants.
+For example: You can pass in `async write(data) {}` instead of `write(data, cb) {}`.
+
+All passed-in functions will be executed with the writable stream as `this`.
 
 The default byteLength function returns the byte length of buffers and `1024`
 for any other object. This means the buffer will contain around 16 non buffers
@@ -400,7 +412,13 @@ in `read` or `write`/`writev` or to override the corresponding `._read`, `._writ
 
 A transform stream is a duplex stream that maps the data written to it and emits that as readable data.
 
-Has the same options as a duplex stream except you can provide a `transform` function also.
+Has the same options as a duplex stream except you can provide a `transform` and `flush` function also.
+
+The `transform` and `flush` operations have the same signature as the `._transform` and `._flush` but
+`._transform` also support an async variant. For example:
+You can pass in `async transform (data) {}` instead of `transform (data, cb) {}`.
+
+All passed-in functions will be executed with the duplex stream as `this`.
 
 #### `ts._transform(data, callback)`
 

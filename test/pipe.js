@@ -96,7 +96,7 @@ tape('simple pipe', function (t) {
       cb(null)
     },
 
-    final () {
+    async final () {
       t.pass('final called')
       t.same(buffered, ['hello', 'world'])
       t.end()

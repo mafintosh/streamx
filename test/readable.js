@@ -231,3 +231,60 @@ tape('use mapReadable to map data', async function (t) {
     t.deepEquals(obj, { foo: 1 })
   }
 })
+
+tape('async read option', async function (t) {
+  let index = 0
+  const data = ['a', 'b', 'c', null]
+  const r = new Readable({
+    async read () {
+      this.push(data[index++])
+    }
+  })
+  const res = []
+  for await (const entry of r) {
+    res.push(entry)
+  }
+  t.same(res, ['a', 'b', 'c'])
+  t.end()
+})
+
+tape('async open option', function (t) {
+  const r = new Readable({
+    open () {
+      return new Promise(resolve => setTimeout(resolve, 30))
+    }
+  })
+  const start = Date.now()
+  r.on('data', () => {
+    t.ok((Date.now() - start) > 25)
+    t.end()
+  })
+  r.push(1)
+  r.push(null)
+})
+
+tape('async destroy option', function (t) {
+  const r = new Readable({
+    destroy () {
+      return new Promise(resolve => setTimeout(resolve, 30))
+    }
+  })
+  r.push(null)
+  const start = Date.now()
+  r.on('close', () => {
+    t.ok((Date.now() - start) > 25)
+    t.end()
+  })
+})
+
+tape('error when no promise is returned by async .read template', function (t) {
+  t.plan(1)
+  const r = new Readable({
+    read () {}
+  })
+  r.on('error', error => {
+    t.ok(error instanceof Error)
+    t.end()
+  })
+  r.read()
+})
