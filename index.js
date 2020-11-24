@@ -876,8 +876,12 @@ function isStreamx (stream) {
   return typeof stream._duplexState === 'number' && isStream(stream)
 }
 
+function isTypedArray (data) {
+  return typeof data === 'object' && data !== null && typeof data.byteLength === 'number'
+}
+
 function defaultByteLength (data) {
-  return Buffer.isBuffer(data) ? data.length : 1024
+  return isTypedArray(data) ? data.byteLength : 1024
 }
 
 function noop () {}
