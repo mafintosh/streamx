@@ -6,7 +6,7 @@ An iteration of the Node.js core streams with a series of improvements.
 npm install streamx
 ```
 
-[![Build Status](https://travis-ci.org/mafintosh/streamx.svg?branch=master)](https://travis-ci.org/mafintosh/streamx)
+[![Build Status](https://github.com/streamxorg/streamx/workflows/Build%20Status/badge.svg)](https://github.com/streamxorg/streamx/actions?query=workflow%3A%22Build+Status%22)
 
 ## Main improvements from Node.js core stream
 
