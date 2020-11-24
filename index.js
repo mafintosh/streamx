@@ -657,7 +657,7 @@ class Readable extends Stream {
     }
   }
 
-  static from (data, opts = {}) {
+  static from (data, opts) {
     if (data[asyncIterator]) return this._fromAsyncIterator(data[asyncIterator](), opts)
     if (!Array.isArray(data)) data = data === undefined ? [] : [data]
 
