@@ -633,10 +633,11 @@ class Readable extends Stream {
     this._duplexState &= READ_PAUSED
   }
 
-  static _fromAsyncIterator (ite) {
+  static _fromAsyncIterator (ite, opts) {
     let destroy
 
     const rs = new Readable({
+      ...opts,
       read (cb) {
         ite.next().then(push).then(cb.bind(null, null)).catch(cb)
       },
@@ -656,12 +657,13 @@ class Readable extends Stream {
     }
   }
 
-  static from (data) {
-    if (data[asyncIterator]) return this._fromAsyncIterator(data[asyncIterator]())
+  static from (data, opts) {
+    if (data[asyncIterator]) return this._fromAsyncIterator(data[asyncIterator](), opts)
     if (!Array.isArray(data)) data = data === undefined ? [] : [data]
 
     let i = 0
     return new Readable({
+      ...opts,
       read (cb) {
         this.push(i === data.length ? null : data[i++])
         cb(null)

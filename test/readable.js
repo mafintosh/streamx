@@ -117,3 +117,19 @@ tape('from async iterator', function (t) {
     t.end()
   })
 })
+
+tape('from array with highWaterMark', function (t) {
+  const r = Readable.from([1, 2, 3], { highWaterMark: 1 })
+  t.same(r._readableState.highWaterMark, 1)
+  t.end()
+})
+
+tape('from async iterator with highWaterMark', function (t) {
+  async function * test () {
+    yield 1
+  }
+
+  const r = Readable.from(test(), { highWaterMark: 1 })
+  t.same(r._readableState.highWaterMark, 1)
+  t.end()
+})
