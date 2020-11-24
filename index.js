@@ -904,7 +904,70 @@ function abort () {
   this.destroy(new Error('Stream aborted.'))
 }
 
+function _pipeline (streams, cb) {
+  let first = streams[0]
+  if (!isStreamx(first)) {
+    first = Readable.from(first)
+  }
+  const result = streams.slice(1).reduce(
+    (from, to, index) => {
+      let error
+      if (!isStream(to)) {
+        error = `#${index + 1} is not a valid target stream.`
+      } else if (!from.readable) {
+        error = `#${index} is not readable.`
+      } else if (!to.writable) {
+        error = `#${index + 1} is not writable.`
+      }
+      if (error) {
+        throw new Error(`Can not pipe #${index} to #${index + 1} as ${error}`)
+      }
+      return from.pipe(to)
+    },
+    first
+  )
+  if (cb) {
+    result.on('close', cb)
+    result.on('error', cb)
+  }
+  return result
+}
+
+function once (fn) {
+  if (!fn) return
+  let called = false
+  return function () {
+    if (called) return
+    called = true
+    fn.apply(this, arguments)
+  }
+}
+
+function pipeline (...args) {
+  const first = args[0]
+  if (Array.isArray(first) && (args.length === 1 || (args.length === 2 && typeof args[1] === 'function'))) {
+    return _pipeline(first, once(args[1]))
+  }
+  const last = args[args.length - 1]
+  if (typeof last !== 'function') {
+    return pipeline(args)
+  }
+  return _pipeline(args.slice(0, args.length - 1), once(last))
+}
+
+function pipelinePromise (...streams) {
+  return new Promise((resolve, reject) => {
+    try {
+      _pipeline(streams, error => error ? reject(error) : resolve())
+    } catch (err) {
+      reject(err)
+    }
+  })
+}
+
 module.exports = {
+  pipeline,
+  pipelinePromise,
   isStream,
   isStreamx,
   Stream,

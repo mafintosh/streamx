@@ -406,6 +406,66 @@ return data to the readable side of the stream.
 
 Per default the transform function just remits the incoming data making it act as a pass-through stream.
 
+## Pipeline
+
+`pipeline` allows to stream form a readable through a set of duplex streams to a writable entry.
+
+If the last argument is a function it will be added to the `close` and `error` event handlers of the
+final stream.
+
+```js
+const { pipeline, Transform, Writable } = require('streamx')
+
+const lastStream = pipeline(
+  [1, 2, 3], // The first entry will be transformed using Readable.from()
+  new Transform({
+    transform (from, cb) {
+      this.push(from.toString())
+      cb()
+    }
+  }),
+  new Writable({
+    write (data, cb) {
+      console.log(data)
+      cb()
+    }
+  })
+  error => {
+    // Callback once write has finished
+  }
+)
+```
+
+#### `pipeline(streams, [cb])` or `pipeline(...streams, [cb])`
+
+Pipeline to a list of streams to a callback.
+
+Returns the last stream of the pipeline.
+
+#### `pipelinePromise(streams)` or `pipelinePromise(...streams)`
+
+Allows to pipe a list of streams to a promise.
+
+```js
+const { pipelinePromise, Transform, Writable } = require('streamx')
+
+await pipelinePromise(
+  [1, 2, 3], // The first entry will be transformed using Readable.from()
+  new Transform({
+    transform (from, cb) {
+      this.push(from.toString())
+      cb()
+    }
+  }),
+  new Writable({
+    write (data, cb) {
+      console.log(data)
+      cb()
+    }
+  })
+)
+```
+
 ## Contributing
 
 If you want to help contribute to streamx a good way to start is to help writing more test
