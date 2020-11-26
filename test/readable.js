@@ -171,3 +171,9 @@ tape('unshift', async function (t) {
   t.same(inc, [0, 1, 2])
   t.end()
 })
+
+tape('from readable should return the original readable', function (t) {
+  const r = new Readable()
+  t.equal(Readable.from(r), r)
+  t.end()
+})

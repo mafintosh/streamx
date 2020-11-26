@@ -663,6 +663,7 @@ class Readable extends Stream {
   }
 
   static from (data, opts) {
+    if (isReadStreamx(data)) return data
     if (data[asyncIterator]) return this._fromAsyncIterator(data[asyncIterator](), opts)
     if (!Array.isArray(data)) data = data === undefined ? [] : [data]
 
@@ -883,6 +884,10 @@ function isStream (stream) {
 
 function isStreamx (stream) {
   return typeof stream._duplexState === 'number' && isStream(stream)
+}
+
+function isReadStreamx (stream) {
+  return isStreamx(stream) && stream.readable
 }
 
 function isTypedArray (data) {
