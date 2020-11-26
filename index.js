@@ -275,7 +275,7 @@ class ReadableState {
     let tail
     const pending = []
 
-    while ((tail === this.queue.shift()) !== undefined) {
+    while ((tail = this.queue.shift()) !== undefined) {
       pending.push(tail)
     }
 
