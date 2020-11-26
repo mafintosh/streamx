@@ -22,7 +22,7 @@ This makes it easy to maintain state.
 Fully integrates a `.destroy()` function. When called the stream will wait for any
 pending operation to finish and call the stream destroy logic.
 
-Close is *always* the last event emitted and `destroy` is always ran.
+Close is *always* the last event emitted and `destroy` is always run.
 
 #### `pipe()` error handles
 
