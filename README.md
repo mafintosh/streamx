@@ -386,6 +386,13 @@ Same goes for the writable side but using `mapWritable` and `byteLengthWritable`
 
 ## Transform Stream
 
+A Transform stream is a duplex stream with an `._transform` template method that allows to
+asynchronously map the input to a different output.
+
+The transform stream overrides the `_write` and `_read` operations of `Readable` and `Writable` but
+still allows the setting of these options in the constructor. Usually it is unnecessary to pass
+in `read` or `write`/`writev` or to override the corresponding `._read`, `._write` or `._writev` operation. 
+
 #### `ts = new stream.Transform([options])`
 
 A transform stream is a duplex stream that maps the data written to it and emits that as readable data.
