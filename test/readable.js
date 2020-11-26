@@ -21,6 +21,30 @@ tape('ondata', function (t) {
   })
 })
 
+function nextImmediate () {
+  return new Promise(resolve => setImmediate(resolve))
+}
+
+tape('pause', async function (t) {
+  const r = new Readable()
+  const buffered = []
+  t.equals(Readable.isPaused(r), true, 'starting off paused')
+  r.on('data', data => buffered.push(data))
+  r.on('close', () => t.end())
+  r.push('hello')
+  await nextImmediate()
+  t.equals(r.pause(), r, '.pause() returns self')
+  t.equals(Readable.isPaused(r), true, '.pause() marks stream as paused')
+  r.push('world')
+  await nextImmediate()
+  t.same(buffered, ['hello'], '.pause() prevents data to be read')
+  t.equals(r.resume(), r, '.resume() returns self')
+  t.equals(Readable.isPaused(r), false, '.resume() marks stream as resumed')
+  await nextImmediate()
+  t.same(buffered, ['hello', 'world'])
+  r.push(null)
+})
+
 tape('resume', function (t) {
   const r = new Readable()
   let ended = 0

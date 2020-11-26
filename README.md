@@ -193,6 +193,8 @@ as to why this stream was destroyed.
 
 Pauses the stream. You will only need to call this if you want to pause a resumed stream.
 
+Returns this stream instance.
+
 #### `rs.resume()`
 
 Will start reading data from the stream as fast as possible.
@@ -201,6 +203,12 @@ If you do not call this, you need to use the `read()` method to read data or the
 pipe the stream somewhere else or the `data` handler.
 
 If none of these option are used the stream will stay paused.
+
+Returns this stream instance.
+
+#### `bool = Readable.isPaused(rs)`
+
+Returns `true` if the stream is paused, else `false`.
 
 #### `writableStream = rs.pipe(writableStream, [callback])`
 
