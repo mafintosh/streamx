@@ -630,10 +630,12 @@ class Readable extends Stream {
   resume () {
     this._duplexState |= READ_RESUMED
     this._readableState.updateNextTick()
+    return this
   }
 
   pause () {
     this._duplexState &= READ_PAUSED
+    return this
   }
 
   static _fromAsyncIterator (ite, opts) {
@@ -676,6 +678,10 @@ class Readable extends Stream {
 
   static isBackpressured (rs) {
     return (rs._duplexState & READ_BACKPRESSURE_STATUS) !== 0 || rs._readableState.buffered >= rs._readableState.highWaterMark
+  }
+
+  static isPaused (rs) {
+    return (rs._duplexState & READ_RESUMED) === 0
   }
 
   [asyncIterator] () {
