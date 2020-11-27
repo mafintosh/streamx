@@ -170,3 +170,15 @@ tape('using abort controller', async function (t) {
   t.same(inc, [0])
   t.end()
 })
+tape('using aborted abort controller', async function (t) {
+  const controller = new AbortController()
+  controller.abort()
+  t.plan(1)
+  try {
+    /* eslint-disable-next-line */
+    new Readable({ signal: controller.signal })
+  } catch (err) {
+    t.same(err.message, 'Stream aborted.')
+  }
+  t.end()
+})

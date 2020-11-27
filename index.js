@@ -522,6 +522,9 @@ class Stream extends EventEmitter {
       if (opts.destroy) this._destroy = opts.destroy
       if (opts.predestroy) this._predestroy = opts.predestroy
       if (opts.signal) {
+        if (opts.signal.aborted) {
+          throw new Error('Stream aborted.')
+        }
         opts.signal.addEventListener('abort', abort.bind(this))
       }
     }
