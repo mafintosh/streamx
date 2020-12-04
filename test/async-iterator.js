@@ -158,6 +158,8 @@ tape('using abort controller', async function (t) {
     return r
   }
   const controller = new AbortController()
+  let removeCalled = false
+  beforeFn(controller.signal, 'removeEventListener', () => { removeCalled = true })
   const inc = []
   setTimeout(() => controller.abort(), 10)
   try {
@@ -167,8 +169,17 @@ tape('using abort controller', async function (t) {
   } catch (err) {
     t.same(err.message, 'Stream aborted.')
   }
+  t.same(removeCalled, true)
   t.same(inc, [0])
   t.end()
+
+  function beforeFn (obj, fnName, handler) {
+    const orig = obj[fnName]
+    obj[fnName] = function () {
+      handler.apply(this, arguments)
+      orig.apply(this, arguments)
+    }
+  }
 })
 tape('using aborted abort controller', async function (t) {
   const controller = new AbortController()

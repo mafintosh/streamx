@@ -525,7 +525,9 @@ class Stream extends EventEmitter {
         if (opts.signal.aborted) {
           throw new Error('Stream aborted.')
         }
-        opts.signal.addEventListener('abort', abort.bind(this))
+        const handler = abort.bind(this)
+        this._clearSignal = clearSignal.bind(null, opts.signal, handler)
+        opts.signal.addEventListener('abort', handler)
       }
     }
   }
@@ -571,6 +573,9 @@ class Stream extends EventEmitter {
         this._writableState.updateNextTick()
       }
       this._predestroy()
+      if (this._clearSignal !== undefined) {
+        this._clearSignal()
+      }
     }
   }
 
@@ -974,6 +979,10 @@ function noop () {}
 
 function abort () {
   this.destroy(new Error('Stream aborted.'))
+}
+
+function clearSignal (signal, handler) {
+  signal.removeEventListener('abort', handler)
 }
 
 module.exports = {
