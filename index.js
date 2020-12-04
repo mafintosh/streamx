@@ -1,5 +1,6 @@
 const { EventEmitter } = require('events')
 const STREAM_DESTROYED = new Error('Stream was destroyed')
+const PREMATURE_CLOSE = new Error('Premature close')
 
 const FIFO = require('fast-fifo')
 
@@ -878,6 +879,68 @@ function transformAfterFlush (err, data) {
   cb(null)
 }
 
+function pipelinePromise (...streams) {
+  return new Promise((resolve, reject) => {
+    return pipeline(...streams, (err) => {
+      if (err) return reject(err)
+      resolve()
+    })
+  })
+}
+
+function pipeline (stream, ...streams) {
+  const all = Array.isArray(stream) ? [...stream, ...streams] : [stream, ...streams]
+  const done = (all.length && typeof all[all.length - 1] === 'function') ? all.pop() : null
+
+  if (all.length < 2) throw new Error('Pipeline requires at least 2 streams')
+
+  let src = all[0]
+  let dest = null
+  let error = null
+
+  for (let i = 1; i < all.length; i++) {
+    dest = all[i]
+
+    if (isStreamx(src)) {
+      src.pipe(dest, onerror)
+    } else {
+      errorHandle(src, true, i > 1, onerror)
+      src.pipe(dest)
+    }
+
+    src = dest
+  }
+
+  if (done) {
+    let fin = false
+
+    dest.on('finish', () => { fin = true })
+    dest.on('error', err => { error = error || err })
+    dest.on('close', () => done(error || (fin ? null : PREMATURE_CLOSE)))
+  }
+
+  return dest
+
+  function errorHandle (s, rd, wr, onerror) {
+    s.on('error', onerror)
+    s.on('close', onclose)
+
+    function onclose () {
+      if (rd && s._readableState && !s._readableState.ended) return onerror(PREMATURE_CLOSE)
+      if (wr && s._writableState && !s._writableState.ended) return onerror(PREMATURE_CLOSE)
+    }
+  }
+
+  function onerror (err) {
+    if (!err || error) return
+    error = err
+
+    for (const s of all) {
+      s.destroy(err)
+    }
+  }
+}
+
 function isStream (stream) {
   return !!stream._readableState || !!stream._writableState
 }
@@ -905,6 +968,8 @@ function abort () {
 }
 
 module.exports = {
+  pipeline,
+  pipelinePromise,
   isStream,
   isStreamx,
   Stream,
