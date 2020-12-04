@@ -81,7 +81,7 @@ function run (eos) {
     })
 
     w.write('hello')
-    w.end()
+    t.equals(w.end(), w)
     w.destroy()
   })
 
@@ -103,7 +103,7 @@ function run (eos) {
     s.push('hello')
     s.push(null)
     s.resume()
-    s.end()
+    t.equals(s.end(), s)
   })
 
   tape(name + ' duplex + deferred s.end()', function (t) {

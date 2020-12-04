@@ -784,6 +784,7 @@ class Writable extends Stream {
   end (data) {
     this._writableState.updateNextTick()
     this._writableState.end(data)
+    return this
   }
 }
 
@@ -821,6 +822,7 @@ class Duplex extends Readable { // and Writable
   end (data) {
     this._writableState.updateNextTick()
     this._writableState.end(data)
+    return this
   }
 }
 
