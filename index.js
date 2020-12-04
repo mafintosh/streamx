@@ -389,7 +389,7 @@ class Pipeline {
 
       if (this.from !== null) {
         if ((this.from._duplexState & READ_DONE) === 0 || !this.pipeToFinished) {
-          this.from.destroy(new Error('Writable stream closed prematurely'))
+          this.from.destroy(this.error || new Error('Writable stream closed prematurely'))
         }
         return
       }
@@ -400,7 +400,7 @@ class Pipeline {
 
       if (this.to !== null) {
         if ((stream._duplexState & READ_DONE) === 0) {
-          this.to.destroy(new Error('Readable stream closed before ending'))
+          this.to.destroy(this.error || new Error('Readable stream closed before ending'))
         }
         return
       }
