@@ -393,7 +393,7 @@ asynchronously map the input to a different output.
 
 The transform stream overrides the `_write` and `_read` operations of `Readable` and `Writable` but
 still allows the setting of these options in the constructor. Usually it is unnecessary to pass
-in `read` or `write`/`writev` or to override the corresponding `._read`, `._write` or `._writev` operation. 
+in `read` or `write`/`writev` or to override the corresponding `._read`, `._write` or `._writev` operation.
 
 #### `ts = new stream.Transform([options])`
 
@@ -407,6 +407,48 @@ Transform the incoming data. Call `callback(null, mappedData)` or use `ts.push(m
 return data to the readable side of the stream.
 
 Per default the transform function just remits the incoming data making it act as a pass-through stream.
+
+## Pipeline
+
+`pipeline` allows to stream form a readable through a set of duplex streams to a writable entry.
+
+```js
+const { pipeline, Readable, Transform, Writable } = require('streamx')
+const lastStream = pipeline(
+  Readable.from([1, 2, 3]),
+  new Transform({
+    transform (from, cb) {
+      this.push(from.toString())
+      cb()
+    }
+  }),
+  new Writable({
+    write (data, cb) {
+      console.log(data)
+      cb()
+    }
+  })
+  error => {
+    // Callback once write has finished
+  }
+)
+```
+
+#### `lastStream = stream.pipeline(...streams, [done])`
+
+Pipe all streams together and return the last stream piped to.
+When the last stream finishes the pipeline ended succesfully.
+
+If any of the streams error, whether they are Node.js core streams
+or streamx streams, all streams in the pipeline are shutdown.
+
+Optionally you can pass a done callback to know when the pipeline is done.
+
+#### `promise = stream.pipelinePromise(...streams)`
+
+Same as normal pipeline except instead of returning the last stream it returns
+a promise representing the done callback. Note you should error handle this
+promise if you use this version.
 
 ## Contributing
 
