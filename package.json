@@ -1,6 +1,6 @@
 {
   "name": "streamx",
-  "version": "2.9.2",
+  "version": "2.10.0",
   "description": "An iteration of the Node.js core streams with a series of improvements",
   "main": "index.js",
   "dependencies": {
