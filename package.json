@@ -4,8 +4,7 @@
   "description": "An iteration of the Node.js core streams with a series of improvements",
   "main": "index.js",
   "dependencies": {
-    "fast-fifo": "^1.0.0",
-    "nanoassert": "^2.0.0"
+    "fast-fifo": "^1.0.0"
   },
   "devDependencies": {
     "abort-controller": "^3.0.0",
