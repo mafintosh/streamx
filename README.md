@@ -271,7 +271,7 @@ Options include:
 }
 ```
 
-In addition you can pass the `open`, `write`, `flush`, and `destroy` functions as shorthands in
+In addition you can pass the `open`, `write`, `final`, and `destroy` functions as shorthands in
 the constructor instead of overwrite the methods below.
 
 The default byteLength function returns the byte length of buffers and `1024`
