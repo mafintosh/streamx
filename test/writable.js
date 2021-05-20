@@ -136,11 +136,33 @@ tape('use mapWritable to map data', function (t) {
   r.end()
 })
 
+tape('repeat calls to .end() should cause an error', function (t) {
+  t.plan(5)
+  const s = new Writable({
+    write (data, cb) {
+      t.equals(data, 'a')
+      cb()
+    }
+  })
+  s.on('close', function () {
+    t.end()
+  })
+  t.equals(s.writable, true)
+  s.end('a')
+  t.equals(s.writable, false)
+  t.throws(function () {
+    s.end('b')
+  })
+  t.throws(function () {
+    s.write('c')
+  })
+})
+
 tape('many ends', function (t) {
   let finals = 0
   let finish = 0
 
-  t.plan(2)
+  t.plan(4)
 
   const s = new Duplex({
     final (cb) {
@@ -151,9 +173,9 @@ tape('many ends', function (t) {
 
   s.end()
   tick(() => {
-    s.end()
+    t.throws(() => s.end())
     tick(() => {
-      s.end()
+      t.throws(() => s.end())
     })
   })
 

@@ -231,3 +231,19 @@ tape('use mapReadable to map data', async function (t) {
     t.deepEquals(obj, { foo: 1 })
   }
 })
+
+tape('push after push(null) should cause an error', function (t) {
+  t.plan(4)
+  const s = new Readable()
+  s.on('data', function (data) {
+    t.equals(data, 'a')
+  })
+  s.on('close', function () {
+    t.end()
+  })
+  t.equals(s.push('a'), true)
+  t.equals(s.push(null), false)
+  t.throws(function () {
+    s.push('b')
+  })
+})
