@@ -109,6 +109,7 @@ class WritableState {
     this.byteLength = byteLengthWritable || byteLength || defaultByteLength
     this.map = mapWritable || map
     this.afterWrite = afterWrite.bind(this)
+    this._updateNT = updateWriteNT.bind(this)
   }
 
   get ended () {
@@ -198,7 +199,7 @@ class WritableState {
   updateNextTick () {
     if ((this.stream._duplexState & WRITE_NEXT_TICK) !== 0) return
     this.stream._duplexState |= WRITE_NEXT_TICK
-    process.nextTick(updateWriteNT, this)
+    queueMicrotask(this._updateNT)
   }
 }
 
@@ -214,6 +215,7 @@ class ReadableState {
     this.map = mapReadable || map
     this.pipeTo = null
     this.afterRead = afterRead.bind(this)
+    this._updateNT = updateReadNT.bind(this)
   }
 
   get ended () {
@@ -357,7 +359,7 @@ class ReadableState {
   updateNextTick () {
     if ((this.stream._duplexState & READ_NEXT_TICK) !== 0) return
     this.stream._duplexState |= READ_NEXT_TICK
-    process.nextTick(updateReadNT, this)
+    queueMicrotask(this._updateNT)
   }
 }
 
@@ -469,14 +471,14 @@ function afterRead (err) {
   if ((this.stream._duplexState & READ_SYNC) === 0) this.update()
 }
 
-function updateReadNT (rs) {
-  rs.stream._duplexState &= READ_NOT_NEXT_TICK
-  rs.update()
+function updateReadNT () {
+  this.stream._duplexState &= READ_NOT_NEXT_TICK
+  this.update()
 }
 
-function updateWriteNT (ws) {
-  ws.stream._duplexState &= WRITE_NOT_NEXT_TICK
-  ws.update()
+function updateWriteNT () {
+  this.stream._duplexState &= WRITE_NOT_NEXT_TICK
+  this.update()
 }
 
 function afterOpen (err) {
