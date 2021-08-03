@@ -109,6 +109,7 @@ class WritableState {
     this.byteLength = byteLengthWritable || byteLength || defaultByteLength
     this.map = mapWritable || map
     this.afterWrite = afterWrite.bind(this)
+    this.afterWriteError = afterWriteError.bind(this)
   }
 
   get ended () {
@@ -146,7 +147,7 @@ class WritableState {
     this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
   }
 
-  autoBatch (data, cb) {
+  autoBatch (data) {
     const buffer = []
     const stream = this.stream
 
@@ -155,8 +156,8 @@ class WritableState {
       buffer.push(stream._writableState.shift())
     }
 
-    if ((stream._duplexState & OPEN_STATUS) !== 0) return cb(null)
-    stream._writev(buffer, cb)
+    if ((stream._duplexState & OPEN_STATUS) !== 0) return
+    return stream._writev(buffer)
   }
 
   update () {
@@ -165,7 +166,9 @@ class WritableState {
     while ((stream._duplexState & WRITE_STATUS) === WRITE_QUEUED) {
       const data = this.shift()
       stream._duplexState |= WRITE_ACTIVE_AND_SYNC
-      stream._write(data, this.afterWrite)
+      const p = stream._write(data)
+      if (p && p.then) p.then(this.afterWrite, this.afterWriteError)
+      else this.afterWrite()
       stream._duplexState &= WRITE_NOT_SYNC
     }
 
@@ -177,21 +180,21 @@ class WritableState {
 
     if ((stream._duplexState & WRITE_FINISHING_STATUS) === WRITE_FINISHING) {
       stream._duplexState = (stream._duplexState | WRITE_ACTIVE) & WRITE_NOT_FINISHING
-      stream._final(afterFinal.bind(this))
+      callPromise(this, stream._final(), afterFinal, afterError)
       return
     }
 
     if ((stream._duplexState & DESTROY_STATUS) === DESTROYING) {
       if ((stream._duplexState & ACTIVE_OR_TICKING) === 0) {
         stream._duplexState |= ACTIVE
-        stream._destroy(afterDestroy.bind(this))
+        callPromise(this, stream._destroy(), afterDestroy, afterDestroyError)
       }
       return
     }
 
     if ((stream._duplexState & IS_OPENING) === OPENING) {
       stream._duplexState = (stream._duplexState | ACTIVE) & NOT_OPENING
-      stream._open(afterOpen.bind(this))
+      callPromise(this, stream._open(), afterOpen, afterError)
     }
   }
 
@@ -214,6 +217,7 @@ class ReadableState {
     this.map = mapReadable || map
     this.pipeTo = null
     this.afterRead = afterRead.bind(this)
+    this.afterReadError = afterReadError.bind(this)
   }
 
   get ended () {
@@ -317,7 +321,9 @@ class ReadableState {
 
     while (this.buffered < this.highWaterMark && (stream._duplexState & SHOULD_NOT_READ) === 0) {
       stream._duplexState |= READ_ACTIVE_AND_SYNC_AND_NEEDS_PUSH
-      stream._read(this.afterRead)
+      const p = stream._read()
+      if (p && p.then) p.then(this.afterRead, this.afterReadError)
+      else this.afterRead()
       stream._duplexState &= READ_NOT_SYNC
       if ((stream._duplexState & READ_ACTIVE) === 0) this.drain()
     }
@@ -343,14 +349,14 @@ class ReadableState {
     if ((stream._duplexState & DESTROY_STATUS) === DESTROYING) {
       if ((stream._duplexState & ACTIVE_OR_TICKING) === 0) {
         stream._duplexState |= ACTIVE
-        stream._destroy(afterDestroy.bind(this))
+        callPromise(this, stream._destroy(), afterDestroy, afterDestroyError)
       }
       return
     }
 
     if ((stream._duplexState & IS_OPENING) === OPENING) {
       stream._duplexState = (stream._duplexState | ACTIVE) & NOT_OPENING
-      stream._open(afterOpen.bind(this))
+      callPromise(this, stream._open(), afterOpen, afterError)
     }
   }
 
@@ -412,14 +418,19 @@ class Pipeline {
   }
 }
 
+function callPromise (self, p, then, error) {
+  if (p && p.then) p.then(then.bind(self), error.bind(self, then))
+  else then.call(self)
+}
+
 function afterDrain () {
   this.stream._duplexState |= READ_PIPE_DRAINED
   if ((this.stream._duplexState & READ_ACTIVE_AND_SYNC) === 0) this.updateNextTick()
 }
 
-function afterFinal (err) {
+function afterFinal () {
   const stream = this.stream
-  if (err) stream.destroy(err)
+
   if ((stream._duplexState & DESTROY_STATUS) === 0) {
     stream._duplexState |= WRITE_DONE
     stream.emit('finish')
@@ -432,10 +443,12 @@ function afterFinal (err) {
   this.update()
 }
 
-function afterDestroy (err) {
-  const stream = this.stream
+function afterDestroy () {
+  afterDestroyError.call(this, this.error !== STREAM_DESTROYED ? this.error : null)
+}
 
-  if (!err && this.error !== STREAM_DESTROYED) err = this.error
+function afterDestroyError (err) {
+  const stream = this.stream
   if (err) stream.emit('error', err)
   stream._duplexState |= DESTROYED
   stream.emit('close')
@@ -447,10 +460,14 @@ function afterDestroy (err) {
   if (ws !== null && ws.pipeline !== null) ws.pipeline.done(stream, err)
 }
 
-function afterWrite (err) {
+function afterWriteError (err) {
+  this.stream.destroy(err)
+  afterWrite.call(this)
+}
+
+function afterWrite () {
   const stream = this.stream
 
-  if (err) stream.destroy(err)
   stream._duplexState &= WRITE_NOT_ACTIVE
 
   if ((stream._duplexState & WRITE_DRAIN_STATUS) === WRITE_UNDRAINED) {
@@ -463,8 +480,12 @@ function afterWrite (err) {
   if ((stream._duplexState & WRITE_SYNC) === 0) this.update()
 }
 
-function afterRead (err) {
-  if (err) this.stream.destroy(err)
+function afterReadError (err) {
+  this.stream.destroy(err)
+  afterRead.call(this)
+}
+
+function afterRead () {
   this.stream._duplexState &= READ_NOT_ACTIVE
   if ((this.stream._duplexState & READ_SYNC) === 0) this.update()
 }
@@ -479,10 +500,13 @@ function updateWriteNT (ws) {
   ws.update()
 }
 
-function afterOpen (err) {
-  const stream = this.stream
+function afterError (fn, err) {
+  this.stream.destroy(err)
+  fn.call(this)
+}
 
-  if (err) stream.destroy(err)
+function afterOpen () {
+  const stream = this.stream
 
   if ((stream._duplexState & DESTROYING) === 0) {
     if ((stream._duplexState & READ_PRIMARY_STATUS) === 0) stream._duplexState |= READ_PRIMARY
@@ -524,12 +548,12 @@ class Stream extends EventEmitter {
     }
   }
 
-  _open (cb) {
-    cb(null)
+  _open () {
+    // does nothing
   }
 
-  _destroy (cb) {
-    cb(null)
+  _destroy () {
+    // does nothing
   }
 
   _predestroy () {
@@ -603,8 +627,8 @@ class Readable extends Stream {
     }
   }
 
-  _read (cb) {
-    cb(null)
+  _read () {
+    // does nothing
   }
 
   pipe (dest, cb) {
@@ -761,16 +785,16 @@ class Writable extends Stream {
     }
   }
 
-  _writev (batch, cb) {
-    cb(null)
+  _writev (batch) {
+    // does nothing
   }
 
-  _write (data, cb) {
-    this._writableState.autoBatch(data, cb)
+  _write (data) {
+    return this._writableState.autoBatch(data)
   }
 
-  _final (cb) {
-    cb(null)
+  _final () {
+    // does nothing
   }
 
   static isBackpressured (ws) {
@@ -803,16 +827,16 @@ class Duplex extends Readable { // and Writable
     }
   }
 
-  _writev (batch, cb) {
-    cb(null)
+  _writev (batch) {
+    // does nothing
   }
 
-  _write (data, cb) {
-    this._writableState.autoBatch(data, cb)
+  _write (data) {
+    return this._writableState.autoBatch(data)
   }
 
-  _final (cb) {
-    cb(null)
+  _final () {
+    // does nothing
   }
 
   write (data) {
@@ -886,6 +910,37 @@ function pipelinePromise (...streams) {
     return pipeline(...streams, (err) => {
       if (err) return reject(err)
       resolve()
+    })
+  })
+}
+
+function finished (stream) {
+  return new Promise((resolve, reject) => {
+    const readable = !!stream._readableState
+    const writable = !!stream._writableState
+
+    const autoDestroy = isStreamx(stream) ||
+      (readable && stream._readableState.autoDestroy) ||
+      (writable && stream._writableState.autoDestroy)
+
+    let ended = false
+    let finished = false
+
+    stream.on('end', function () {
+      ended = true
+      if (!autoDestroy && (!writable || finished)) resolve()
+    })
+
+    stream.on('finish', function () {
+      finished = true
+      if (!autoDestroy && (!readable || ended)) resolve()
+    })
+
+    stream.on('error', reject)
+
+    stream.on('close', function () {
+      if ((readable && !ended) || (writable && !finished)) reject(PREMATURE_CLOSE)
+      else resolve()
     })
   })
 }
@@ -972,6 +1027,7 @@ function abort () {
 module.exports = {
   pipeline,
   pipelinePromise,
+  finished,
   isStream,
   isStreamx,
   Stream,
