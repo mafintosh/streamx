@@ -109,7 +109,7 @@ class WritableState {
     this.byteLength = byteLengthWritable || byteLength || defaultByteLength
     this.map = mapWritable || map
     this.afterWrite = afterWrite.bind(this)
-    this._updateNT = updateWriteNT.bind(this)
+    this.afterUpdateNextTick = updateWriteNT.bind(this)
   }
 
   get ended () {
@@ -199,7 +199,7 @@ class WritableState {
   updateNextTick () {
     if ((this.stream._duplexState & WRITE_NEXT_TICK) !== 0) return
     this.stream._duplexState |= WRITE_NEXT_TICK
-    queueMicrotask(this._updateNT)
+    queueMicrotask(this.afterUpdateNextTick)
   }
 }
 
@@ -215,7 +215,7 @@ class ReadableState {
     this.map = mapReadable || map
     this.pipeTo = null
     this.afterRead = afterRead.bind(this)
-    this._updateNT = updateReadNT.bind(this)
+    this.afterUpdateNextTick = updateReadNT.bind(this)
   }
 
   get ended () {
@@ -359,7 +359,7 @@ class ReadableState {
   updateNextTick () {
     if ((this.stream._duplexState & READ_NEXT_TICK) !== 0) return
     this.stream._duplexState |= READ_NEXT_TICK
-    queueMicrotask(this._updateNT)
+    queueMicrotask(this.afterUpdateNextTick)
   }
 }
 
