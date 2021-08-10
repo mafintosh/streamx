@@ -2,6 +2,7 @@ const { EventEmitter } = require('events')
 const STREAM_DESTROYED = new Error('Stream was destroyed')
 const PREMATURE_CLOSE = new Error('Premature close')
 
+const queueTick = require('queue-tick')
 const FIFO = require('fast-fifo')
 
 /* eslint-disable no-multi-spaces */
@@ -199,7 +200,7 @@ class WritableState {
   updateNextTick () {
     if ((this.stream._duplexState & WRITE_NEXT_TICK) !== 0) return
     this.stream._duplexState |= WRITE_NEXT_TICK
-    queueMicrotask(this.afterUpdateNextTick)
+    queueTick(this.afterUpdateNextTick)
   }
 }
 
@@ -359,7 +360,7 @@ class ReadableState {
   updateNextTick () {
     if ((this.stream._duplexState & READ_NEXT_TICK) !== 0) return
     this.stream._duplexState |= READ_NEXT_TICK
-    queueMicrotask(this.afterUpdateNextTick)
+    queueTick(this.afterUpdateNextTick)
   }
 }
 
