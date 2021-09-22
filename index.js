@@ -295,8 +295,8 @@ class ReadableState {
 
     if ((stream._duplexState & READ_STATUS) === READ_QUEUED) {
       const data = this.shift()
-      if ((stream._duplexState & READ_EMIT_DATA) !== 0) stream.emit('data', data)
       if (this.pipeTo !== null && this.pipeTo.write(data) === false) stream._duplexState &= READ_PIPE_NOT_DRAINED
+      if ((stream._duplexState & READ_EMIT_DATA) !== 0) stream.emit('data', data)
       return data
     }
 
@@ -308,8 +308,8 @@ class ReadableState {
 
     while ((stream._duplexState & READ_STATUS) === READ_QUEUED && (stream._duplexState & READ_FLOWING) !== 0) {
       const data = this.shift()
-      if ((stream._duplexState & READ_EMIT_DATA) !== 0) stream.emit('data', data)
       if (this.pipeTo !== null && this.pipeTo.write(data) === false) stream._duplexState &= READ_PIPE_NOT_DRAINED
+      if ((stream._duplexState & READ_EMIT_DATA) !== 0) stream.emit('data', data)
     }
   }
 
