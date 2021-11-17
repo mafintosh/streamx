@@ -110,7 +110,8 @@ Options include:
   highWaterMark: 16384, // max buffer size in bytes
   map: (data) => data, // optional function to map input data
   byteLength: (data) => size, // optional function that calculates the byte size of input data
-  signal: abortController.signal // optional AbortSignal that triggers `.destroy` when on `abort`
+  signal: abortController.signal, // optional AbortSignal that triggers `.destroy` when on `abort`
+  eagerOpen: false // eagerly open the stream
 }
 ```
 
