@@ -63,6 +63,37 @@ tape('resume', function (t) {
   })
 })
 
+tape('lazy open', async function (t) {
+  let opened = false
+  const r = new Readable({
+    open (cb) {
+      opened = true
+      cb(null)
+    }
+  })
+  await nextImmediate()
+  t.notOk(opened)
+  r.push(null)
+  await nextImmediate()
+  t.ok(opened)
+  t.end()
+})
+
+tape('eager open', async function (t) {
+  let opened = false
+  const r = new Readable({
+    open (cb) {
+      opened = true
+      cb(null)
+    },
+    eagerOpen: true
+  })
+  await nextImmediate()
+  t.ok(opened)
+  r.push(null)
+  t.end()
+})
+
 tape('shorthands', function (t) {
   t.plan(3 + 1)
 

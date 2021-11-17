@@ -603,6 +603,7 @@ class Readable extends Stream {
 
     if (opts) {
       if (opts.read) this._read = opts.read
+      if (opts.eagerOpen) this.resume().pause()
     }
   }
 
