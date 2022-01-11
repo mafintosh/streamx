@@ -208,3 +208,26 @@ tape('from readable should return the original readable', function (t) {
   t.equal(Readable.from(r), r)
   t.end()
 })
+
+tape('map readable data', async function (t) {
+  t.plan(1)
+  const r = new Readable({
+    map: input => JSON.parse(input)
+  })
+  r.push('{ "foo": 1 }')
+  for await (const obj of r) {
+    t.deepEquals(obj, { foo: 1 })
+  }
+})
+
+tape('use mapReadable to map data', async function (t) {
+  t.plan(1)
+  const r = new Readable({
+    map: () => t.fail('.mapReadable has priority'),
+    mapReadable: input => JSON.parse(input)
+  })
+  r.push('{ "foo": 1 }')
+  for await (const obj of r) {
+    t.deepEquals(obj, { foo: 1 })
+  }
+})
