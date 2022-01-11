@@ -101,3 +101,36 @@ tape('writev', function (t) {
     t.end()
   })
 })
+
+tape('map written data', function (t) {
+  t.plan(1)
+  const r = new Writable({
+    write (data, cb) {
+      t.equals(data, '{"foo":1}')
+      cb()
+    },
+    map: input => JSON.stringify(input)
+  })
+  r.on('end', () => {
+    t.end()
+  })
+  r.write({ foo: 1 })
+  r.end()
+})
+
+tape('use mapWritable to map data', function (t) {
+  t.plan(1)
+  const r = new Writable({
+    write (data, cb) {
+      t.equals(data, '{"foo":1}')
+      cb()
+    },
+    map: () => t.fail('.mapWritable has priority'),
+    mapWritable: input => JSON.stringify(input)
+  })
+  r.on('end', () => {
+    t.end()
+  })
+  r.write({ foo: 1 })
+  r.end()
+})
