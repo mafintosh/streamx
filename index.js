@@ -100,7 +100,7 @@ const WRITE_BACKPRESSURE_STATUS = WRITE_UNDRAINED | DESTROY_STATUS | WRITE_FINIS
 const asyncIterator = Symbol.asyncIterator || Symbol('asyncIterator')
 
 class WritableState {
-  constructor (stream, { highWaterMark = 16384, map = null, mapWritable, byteLength, byteLengthWritable } = {}) {
+  constructor (stream, { highWaterMark = 16384, map, codec, mapWritable, byteLength, byteLengthWritable } = {}) {
     this.stream = stream
     this.queue = new FIFO()
     this.highWaterMark = highWaterMark
@@ -108,7 +108,7 @@ class WritableState {
     this.error = null
     this.pipeline = null
     this.byteLength = byteLengthWritable || byteLength || defaultByteLength
-    this.map = mapWritable || map
+    this.map = mapWritable || map || (codec && (input => codec.encode(input))) || null
     this.afterWrite = afterWrite.bind(this)
     this.afterUpdateNextTick = updateWriteNT.bind(this)
   }
@@ -205,7 +205,7 @@ class WritableState {
 }
 
 class ReadableState {
-  constructor (stream, { highWaterMark = 16384, map = null, mapReadable, byteLength, byteLengthReadable } = {}) {
+  constructor (stream, { highWaterMark = 16384, map, mapReadable, codec, byteLength, byteLengthReadable } = {}) {
     this.stream = stream
     this.queue = new FIFO()
     this.highWaterMark = highWaterMark
@@ -213,7 +213,7 @@ class ReadableState {
     this.error = null
     this.pipeline = null
     this.byteLength = byteLengthReadable || byteLength || defaultByteLength
-    this.map = mapReadable || map
+    this.map = mapReadable || map || (codec && (input => codec.decode(input))) || null
     this.pipeTo = null
     this.afterRead = afterRead.bind(this)
     this.afterUpdateNextTick = updateReadNT.bind(this)

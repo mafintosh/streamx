@@ -110,6 +110,7 @@ tape('map written data', function (t) {
       t.equals(data, '{"foo":1}')
       cb()
     },
+    codec: { encode: () => t.fail('.map has priority over .codec') },
     map: input => JSON.stringify(input)
   })
   r.on('end', () => {
@@ -126,6 +127,7 @@ tape('use mapWritable to map data', function (t) {
       t.equals(data, '{"foo":1}')
       cb()
     },
+    codec: { encode: () => t.fail('.mapWritable has priority over .codec') },
     map: () => t.fail('.mapWritable has priority'),
     mapWritable: input => JSON.stringify(input)
   })
@@ -162,4 +164,29 @@ tape('many ends', function (t) {
     t.equals(finals, 1)
     t.equals(finish, 1)
   })
+})
+
+tape('use codec to map data', async function (t) {
+  t.plan(2)
+  const codec = {
+    encode (input) {
+      t.equals(this, codec)
+      return JSON.stringify(input)
+    },
+    decode () {
+      throw new Error('.decode unexpected')
+    }
+  }
+  const r = new Writable({
+    write (data, cb) {
+      t.equals(data, '{"foo":1}')
+      cb()
+    },
+    codec
+  })
+  r.on('end', () => {
+    t.end()
+  })
+  r.write({ foo: 1 })
+  r.end()
 })

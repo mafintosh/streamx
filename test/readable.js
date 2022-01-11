@@ -212,6 +212,7 @@ tape('from readable should return the original readable', function (t) {
 tape('map readable data', async function (t) {
   t.plan(1)
   const r = new Readable({
+    codec: { decode: () => t.fail('.map has priority over .codec') },
     map: input => JSON.parse(input)
   })
   r.push('{ "foo": 1 }')
@@ -223,9 +224,28 @@ tape('map readable data', async function (t) {
 tape('use mapReadable to map data', async function (t) {
   t.plan(1)
   const r = new Readable({
-    map: () => t.fail('.mapReadable has priority'),
+    codec: { decode: () => t.fail('.mapReadable has priority over .codec') },
+    map: () => t.fail('.mapReadable has priority over .map'),
     mapReadable: input => JSON.parse(input)
   })
+  r.push('{ "foo": 1 }')
+  for await (const obj of r) {
+    t.deepEquals(obj, { foo: 1 })
+  }
+})
+
+tape('use codec to map data', async function (t) {
+  t.plan(2)
+  const codec = {
+    encode () {
+      throw new Error('.codec unexpected')
+    },
+    decode (str) {
+      t.equals(this, codec)
+      return JSON.parse(str)
+    }
+  }
+  const r = new Readable({ codec })
   r.push('{ "foo": 1 }')
   for await (const obj of r) {
     t.deepEquals(obj, { foo: 1 })

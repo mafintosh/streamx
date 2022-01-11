@@ -122,6 +122,11 @@ The default byteLength function returns the byte length of buffers and `1024`
 for any other object. This means the buffer will contain around 16 non buffers
 or buffers worth 16kb when full if the defaults are used.
 
+Alternatively to `map` you can also use an [abstract-encoding][] codec with the `.codec`
+property. `.codec.decode()` will be used to map the input data.
+
+[abstract-encoding]: https://github.com/mafintosh/abstract-encoding
+
 #### `rs._read(cb)`
 
 This function is called when the stream wants you to push new data.
@@ -278,6 +283,9 @@ the constructor instead of overwrite the methods below.
 The default byteLength function returns the byte length of buffers and `1024`
 for any other object. This means the buffer will contain around 16 non buffers
 or buffers worth 16kb when full if the defaults are used.
+
+Alternatively to `map` you can also use an [abstract-encoding][] codec with the `.codec`
+property. `.codec.encode()` will be used to map the input data.
 
 #### `ws._open(cb)`
 
