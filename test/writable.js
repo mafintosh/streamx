@@ -1,5 +1,6 @@
 const tape = require('tape')
-const { Writable } = require('../')
+const tick = require('queue-tick')
+const { Writable, Duplex } = require('../')
 
 tape('opens before writes', function (t) {
   t.plan(2)
@@ -133,4 +134,32 @@ tape('use mapWritable to map data', function (t) {
   })
   r.write({ foo: 1 })
   r.end()
+})
+
+tape('many ends', function (t) {
+  let finals = 0
+  let finish = 0
+
+  t.plan(2)
+
+  const s = new Duplex({
+    final (cb) {
+      finals++
+      cb(null)
+    }
+  })
+
+  s.end()
+  tick(() => {
+    s.end()
+    tick(() => {
+      s.end()
+    })
+  })
+
+  s.on('finish', function () {
+    finish++
+    t.equals(finals, 1)
+    t.equals(finish, 1)
+  })
 })
