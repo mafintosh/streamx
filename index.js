@@ -711,7 +711,7 @@ class Readable extends Stream {
           promiseReject = reject
           const data = stream.read()
           if (data !== null) ondata(data)
-          else if ((stream._duplexState & DESTROYED) !== 0) ondata(null)
+          else if ((stream._duplexState & DESTROY_STATUS) !== 0) ondata(null)
         })
       },
       return () {
