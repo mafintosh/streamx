@@ -174,7 +174,7 @@ tape('using abort controller', async function (t) {
 tape('from async iterator and to async iterator', async function (t) {
   const expected = []
 
-  const stream = Readable.from(async function* () {
+  const stream = Readable.from(async function * () {
     yield 'a'
     yield 'b'
   }())
