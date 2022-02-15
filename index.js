@@ -655,6 +655,7 @@ class Readable extends Stream {
         destroy = ite.return()
       },
       destroy (cb) {
+        if (!destroy) return cb(null)
         destroy.then(cb.bind(null, null)).catch(cb)
       }
     })
