@@ -418,6 +418,7 @@ class Pipeline {
 function afterDrain () {
   this.stream._duplexState |= READ_PIPE_DRAINED
   if ((this.stream._duplexState & READ_ACTIVE_AND_SYNC) === 0) this.updateNextTick()
+  else this.drain()
 }
 
 function afterFinal (err) {
