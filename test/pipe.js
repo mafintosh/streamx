@@ -132,3 +132,37 @@ tape('pipe with callback', function (t) {
   r.push('world')
   r.push(null)
 })
+
+tape('pipe continues if read is "blocked"', function (t) {
+  t.plan(1)
+
+  let written = 0
+  let read = 0
+
+  const r = new Readable({
+    read (cb) {
+      this.push('test')
+
+      if (++read === 20) {
+        setTimeout(done, 10)
+        return
+      }
+
+      cb(null)
+    }
+  })
+
+  const w = new Writable({
+    write (data, cb) {
+      written++
+      cb(null)
+    }
+  })
+
+  r.pipe(w)
+
+  function done () {
+    t.same(written, read)
+    t.end()
+  }
+})
