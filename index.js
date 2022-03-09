@@ -229,7 +229,7 @@ class ReadableState {
 
     this.stream._duplexState |= READ_PIPE_DRAINED
     this.pipeTo = pipeTo
-    this.pipeline = new Pipeline(this.stream, pipeTo, cb || null)
+    this.pipeline = new Pipeline(this.stream, pipeTo, cb)
 
     if (cb) this.stream.on('error', noop) // We already error handle this so supress crashes
 
