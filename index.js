@@ -225,6 +225,7 @@ class ReadableState {
 
   pipe (pipeTo, cb) {
     if (this.pipeTo !== null) throw new Error('Can only pipe to one destination')
+    if (typeof cb !== 'function') cb = null
 
     this.stream._duplexState |= READ_PIPE_DRAINED
     this.pipeTo = pipeTo
@@ -410,7 +411,7 @@ class Pipeline {
       }
     }
 
-    if (this.afterPipe !== null && (typeof this.afterPipe === 'function')) this.afterPipe(this.error)
+    if (this.afterPipe !== null) this.afterPipe(this.error)
     this.to = this.from = this.afterPipe = null
   }
 }
