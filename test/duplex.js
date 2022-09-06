@@ -1,5 +1,5 @@
 const tape = require('tape')
-const { Duplex } = require('../')
+const { Duplex, Readable, Writable } = require('../')
 
 tape('if open does not end, it should stall', function (t) {
   t.plan(1)
@@ -41,4 +41,22 @@ tape('Using both mapReadable and mapWritable to map data', function (t) {
   })
   d.write('32')
   d.end()
+})
+
+tape('Ends the writableState when Readable has no more data', function (t) {
+  t.plan(1)
+
+  const d = new Duplex({
+    read (cb) {
+      t.equals(d._writableState.ended, true)
+      this.push(null)
+      cb()
+    },
+    write (data, cb) {
+      this.push(data)
+      cb()
+    }
+  })
+
+  Readable.from([]).pipe(d).pipe(new Writable())
 })
