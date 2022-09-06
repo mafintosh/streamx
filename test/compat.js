@@ -176,3 +176,22 @@ function run (eos) {
     s.destroy()
   })
 }
+
+tape('nodeStream: duplex writableState is ended when Readable has no more data', function (t) {
+  const { Readable } = require('stream')
+  t.plan(1)
+
+  const d = new stream.Duplex({
+    read (cb) {
+      t.equals(d._writableState.ended, true)
+      this.push(null)
+      cb()
+    },
+    write (data, cb) {
+      this.push(data)
+      cb()
+    }
+  })
+
+  Readable.from([]).pipe(d).pipe(new stream.Writable())
+})
