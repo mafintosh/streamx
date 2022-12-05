@@ -4,20 +4,19 @@
   "description": "An iteration of the Node.js core streams with a series of improvements",
   "main": "index.js",
   "dependencies": {
-    "fast-fifo": "^1.0.0",
-    "queue-tick": "^1.0.0"
+    "fast-fifo": "^1.1.0",
+    "queue-tick": "^1.0.1"
   },
   "devDependencies": {
-    "abort-controller": "^3.0.0",
-    "end-of-stream": "^1.4.1",
-    "standard": "^14.3.1",
-    "tape": "^4.11.0"
+    "brittle": "^3.1.1",
+    "end-of-stream": "^1.4.4",
+    "standard": "^17.0.0"
   },
   "files": [
     "index.js"
   ],
   "scripts": {
-    "test": "standard && tape test/*.js"
+    "test": "standard && brittle test/*.js"
   },
   "repository": {
     "type": "git",

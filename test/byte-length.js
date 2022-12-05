@@ -1,4 +1,4 @@
-const tape = require('tape')
+const test = require('brittle')
 const { Readable, Writable } = require('../')
 
 const defaultSizes = [
@@ -11,37 +11,40 @@ const defaultSizes = [
 ]
 
 for (const { name, item, size, byteLength, byteLengthExtended } of defaultSizes) {
-  tape(`readable ${name}`, function (t) {
+  test(`readable ${name}`, function (t) {
     const r = new Readable({ byteLength, byteLengthReadable: byteLengthExtended })
     r.push(item)
-    t.same(r._readableState.buffered, size)
-    t.end()
+    t.is(r._readableState.buffered, size)
   })
-  tape(`writable ${name}`, function (t) {
+
+  test(`writable ${name}`, function (t) {
     const w = new Writable({ byteLength, byteLengthWritable: byteLengthExtended })
     w.write(item)
-    t.same(w._writableState.buffered, size)
-    t.end()
+    t.is(w._writableState.buffered, size)
   })
 }
-tape('byteLength receives readable item', function (t) {
+
+test('byteLength receives readable item', function (t) {
+  t.plan(1)
+
   const obj = {}
   const r = new Readable({
     byteLength: data => {
-      t.equals(obj, data)
-      t.end()
+      t.alike(obj, data)
     }
   })
   r.push(obj)
 })
-tape('byteLength receives writable item', function (t) {
+
+test('byteLength receives writable item', function (t) {
+  t.plan(2)
+
   const obj = {}
   const r = new Writable({
     byteLength: data => {
-      t.equals(obj, data)
+      t.alike(obj, data)
       return 1
     }
   })
   r.write(obj)
-  t.end()
 })

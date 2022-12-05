@@ -1,5 +1,5 @@
 const eos = require('end-of-stream')
-const tape = require('tape')
+const test = require('brittle')
 const stream = require('../')
 const finished = require('stream').finished
 
@@ -9,7 +9,10 @@ run(finished)
 function run (eos) {
   if (!eos) return
   const name = eos === finished ? 'nodeStream.finished' : 'eos'
-  tape(name + ' readable', function (t) {
+
+  test(name + ' readable', function (t) {
+    t.plan(2)
+
     const r = new stream.Readable()
     let ended = false
 
@@ -18,9 +21,8 @@ function run (eos) {
     })
 
     eos(r, function (err) {
-      t.error(err, 'no error')
+      t.absent(err, 'no error')
       t.ok(ended)
-      t.end()
     })
 
     r.push('hello')
@@ -28,7 +30,9 @@ function run (eos) {
     r.resume()
   })
 
-  tape(name + ' readable destroy', function (t) {
+  test(name + ' readable destroy', function (t) {
+    t.plan(2)
+
     const r = new stream.Readable()
     let ended = false
 
@@ -38,8 +42,7 @@ function run (eos) {
 
     eos(r, function (err) {
       t.ok(err, 'had error')
-      t.notOk(ended)
-      t.end()
+      t.absent(ended)
     })
 
     r.push('hello')
@@ -48,7 +51,9 @@ function run (eos) {
     r.destroy()
   })
 
-  tape(name + ' writable', function (t) {
+  test(name + ' writable', function (t) {
+    t.plan(2)
+
     const w = new stream.Writable()
     let finished = false
 
@@ -57,16 +62,17 @@ function run (eos) {
     })
 
     eos(w, function (err) {
-      t.error(err, 'no error')
+      t.absent(err, 'no error')
       t.ok(finished)
-      t.end()
     })
 
     w.write('hello')
     w.end()
   })
 
-  tape(name + ' writable destroy', function (t) {
+  test(name + ' writable destroy', function (t) {
+    t.plan(3)
+
     const w = new stream.Writable()
     let finished = false
 
@@ -76,16 +82,17 @@ function run (eos) {
 
     eos(w, function (err) {
       t.ok(err, 'had error')
-      t.notOk(finished)
-      t.end()
+      t.absent(finished)
     })
 
     w.write('hello')
-    t.equals(w.end(), w)
+    t.is(w.end(), w)
     w.destroy()
   })
 
-  tape(name + ' duplex', function (t) {
+  test(name + ' duplex', function (t) {
+    t.plan(4)
+
     const s = new stream.Duplex()
     let ended = false
     let finished = false
@@ -94,19 +101,20 @@ function run (eos) {
     s.on('finish', () => { finished = true })
 
     eos(s, function (err) {
-      t.error(err, 'no error')
+      t.absent(err, 'no error')
       t.ok(ended)
       t.ok(finished)
-      t.end()
     })
 
     s.push('hello')
     s.push(null)
     s.resume()
-    t.equals(s.end(), s)
+    t.is(s.end(), s)
   })
 
-  tape(name + ' duplex + deferred s.end()', function (t) {
+  test(name + ' duplex + deferred s.end()', function (t) {
+    t.plan(3)
+
     const s = new stream.Duplex()
     let ended = false
     let finished = false
@@ -119,10 +127,9 @@ function run (eos) {
     s.on('finish', () => { finished = true })
 
     eos(s, function (err) {
-      t.error(err, 'no error')
+      t.absent(err, 'no error')
       t.ok(ended)
       t.ok(finished)
-      t.end()
     })
 
     s.push('hello')
@@ -130,7 +137,9 @@ function run (eos) {
     s.resume()
   })
 
-  tape(name + ' duplex + deferred s.push(null)', function (t) {
+  test(name + ' duplex + deferred s.push(null)', function (t) {
+    t.plan(3)
+
     const s = new stream.Duplex()
     let ended = false
     let finished = false
@@ -143,10 +152,9 @@ function run (eos) {
     s.on('end', () => { ended = true })
 
     eos(s, function (err) {
-      t.error(err, 'no error')
+      t.absent(err, 'no error')
       t.ok(ended)
       t.ok(finished)
-      t.end()
     })
 
     s.push('hello')
@@ -154,7 +162,9 @@ function run (eos) {
     s.resume()
   })
 
-  tape(name + ' duplex destroy', function (t) {
+  test(name + ' duplex destroy', function (t) {
+    t.plan(3)
+
     const s = new stream.Duplex()
     let ended = false
     let finished = false
@@ -164,9 +174,8 @@ function run (eos) {
 
     eos(s, function (err) {
       t.ok(err, 'had error')
-      t.notOk(ended)
-      t.notOk(finished)
-      t.end()
+      t.absent(ended)
+      t.absent(finished)
     })
 
     s.push('hello')

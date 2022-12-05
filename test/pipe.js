@@ -1,8 +1,10 @@
-const tape = require('tape')
+const test = require('brittle')
 const compat = require('stream')
 const { Readable, Writable } = require('../')
 
-tape('pipe to node stream', function (t) {
+test('pipe to node stream', function (t) {
+  t.plan(3)
+
   const expected = [
     'hi',
     'ho'
@@ -12,7 +14,7 @@ tape('pipe to node stream', function (t) {
   const w = new compat.Writable({
     objectMode: true,
     write (data, enc, cb) {
-      t.same(data, expected.shift())
+      t.is(data, expected.shift())
       cb(null)
     }
   })
@@ -24,12 +26,13 @@ tape('pipe to node stream', function (t) {
   r.pipe(w)
 
   w.on('finish', function () {
-    t.same(expected.length, 0)
-    t.end()
+    t.is(expected.length, 0)
   })
 })
 
-tape('pipe with callback - error case', function (t) {
+test('pipe with callback - error case', function (t) {
+  t.plan(2)
+
   const r = new Readable()
   const w = new Writable({
     write (data, cb) {
@@ -39,8 +42,7 @@ tape('pipe with callback - error case', function (t) {
 
   r.pipe(w, function (err) {
     t.pass('callback called')
-    t.same(err, new Error('blerg'))
-    t.end()
+    t.alike(err, new Error('blerg'))
   })
 
   r.push('hello')
@@ -48,7 +50,9 @@ tape('pipe with callback - error case', function (t) {
   r.push(null)
 })
 
-tape('pipe with callback - error case with destroy', function (t) {
+test('pipe with callback - error case with destroy', function (t) {
+  t.plan(2)
+
   const r = new Readable()
   const w = new Writable({
     write (data, cb) {
@@ -59,15 +63,16 @@ tape('pipe with callback - error case with destroy', function (t) {
 
   r.pipe(w, function (err) {
     t.pass('callback called')
-    t.same(err, new Error('blerg'))
-    t.end()
+    t.alike(err, new Error('blerg'))
   })
 
   r.push('hello')
   r.push('world')
 })
 
-tape('pipe with callback - error case node stream', function (t) {
+test('pipe with callback - error case node stream', function (t) {
+  t.plan(2)
+
   const r = new Readable()
   const w = new compat.Writable({
     write (data, enc, cb) {
@@ -77,8 +82,7 @@ tape('pipe with callback - error case node stream', function (t) {
 
   r.pipe(w, function (err) {
     t.pass('callback called')
-    t.same(err, new Error('blerg'))
-    t.end()
+    t.alike(err, new Error('blerg'))
   })
 
   r.push('hello')
@@ -86,7 +90,9 @@ tape('pipe with callback - error case node stream', function (t) {
   r.push(null)
 })
 
-tape('simple pipe', function (t) {
+test('simple pipe', function (t) {
+  t.plan(2)
+
   const buffered = []
 
   const r = new Readable()
@@ -98,8 +104,7 @@ tape('simple pipe', function (t) {
 
     final () {
       t.pass('final called')
-      t.same(buffered, ['hello', 'world'])
-      t.end()
+      t.alike(buffered, ['hello', 'world'])
     }
   })
 
@@ -110,7 +115,9 @@ tape('simple pipe', function (t) {
   r.push(null)
 })
 
-tape('pipe with callback', function (t) {
+test('pipe with callback', function (t) {
+  t.plan(3)
+
   const buffered = []
 
   const r = new Readable()
@@ -123,9 +130,8 @@ tape('pipe with callback', function (t) {
 
   r.pipe(w, function (err) {
     t.pass('callback called')
-    t.same(err, null)
-    t.same(buffered, ['hello', 'world'])
-    t.end()
+    t.is(err, null)
+    t.alike(buffered, ['hello', 'world'])
   })
 
   r.push('hello')
@@ -133,7 +139,7 @@ tape('pipe with callback', function (t) {
   r.push(null)
 })
 
-tape('pipe continues if read is "blocked"', function (t) {
+test('pipe continues if read is "blocked"', function (t) {
   t.plan(1)
 
   let written = 0
@@ -162,7 +168,6 @@ tape('pipe continues if read is "blocked"', function (t) {
   r.pipe(w)
 
   function done () {
-    t.same(written, read)
-    t.end()
+    t.is(written, read)
   }
 })
