@@ -834,6 +834,10 @@ class Duplex extends Readable { // and Writable
     this._writableState.end(data)
     return this
   }
+
+  get error () {
+    return this._readableState.error || this._writableState.error
+  }
 }
 
 class Transform extends Duplex {

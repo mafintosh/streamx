@@ -42,3 +42,14 @@ tape('Using both mapReadable and mapWritable to map data', function (t) {
   d.write('32')
   d.end()
 })
+
+tape('duplex error property', function (t) {
+  const d = new Duplex()
+  d.on('error', () => {})
+
+  const err = new Error('stop')
+  d.destroy(err)
+  t.same(d.error, err)
+
+  t.end()
+})
