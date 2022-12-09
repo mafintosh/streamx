@@ -596,6 +596,10 @@ class Stream extends EventEmitter {
 
     return super.on(name, fn)
   }
+
+  static getError (stream) {
+    return (stream._readableState && stream._readableState.error) || (stream._writableState && stream._writableState.error)
+  }
 }
 
 class Readable extends Stream {
@@ -833,10 +837,6 @@ class Duplex extends Readable { // and Writable
     this._writableState.updateNextTick()
     this._writableState.end(data)
     return this
-  }
-
-  get error () {
-    return this._readableState.error || this._writableState.error
   }
 }
 
