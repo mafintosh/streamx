@@ -1,5 +1,5 @@
 const tape = require('tape')
-const { Duplex } = require('../')
+const { Duplex, getStreamError } = require('../')
 
 tape('if open does not end, it should stall', function (t) {
   t.plan(1)
@@ -49,7 +49,7 @@ tape('get error from stream', function (t) {
 
   const err = new Error('stop')
   d.destroy(err)
-  t.same(Duplex.getError(d), err)
+  t.same(getStreamError(d), err)
 
   t.end()
 })
