@@ -1,7 +1,9 @@
-const tape = require('tape')
+const test = require('brittle')
 const { Readable } = require('../')
 
-tape('ondata', function (t) {
+test('ondata', function (t) {
+  t.plan(4)
+
   const r = new Readable()
   const buffered = []
   let ended = 0
@@ -14,10 +16,9 @@ tape('ondata', function (t) {
   r.on('end', () => ended++)
   r.on('close', function () {
     t.pass('closed')
-    t.same(buffered, ['hello', 'world'])
-    t.same(ended, 1)
+    t.alike(buffered, ['hello', 'world'])
+    t.is(ended, 1)
     t.ok(r.destroyed)
-    t.end()
   })
 })
 
@@ -25,27 +26,29 @@ function nextImmediate () {
   return new Promise(resolve => setImmediate(resolve))
 }
 
-tape('pause', async function (t) {
+test('pause', async function (t) {
   const r = new Readable()
   const buffered = []
-  t.equals(Readable.isPaused(r), true, 'starting off paused')
+  t.is(Readable.isPaused(r), true, 'starting off paused')
   r.on('data', data => buffered.push(data))
   r.on('close', () => t.end())
   r.push('hello')
   await nextImmediate()
-  t.equals(r.pause(), r, '.pause() returns self')
-  t.equals(Readable.isPaused(r), true, '.pause() marks stream as paused')
+  t.is(r.pause(), r, '.pause() returns self')
+  t.is(Readable.isPaused(r), true, '.pause() marks stream as paused')
   r.push('world')
   await nextImmediate()
-  t.same(buffered, ['hello'], '.pause() prevents data to be read')
-  t.equals(r.resume(), r, '.resume() returns self')
-  t.equals(Readable.isPaused(r), false, '.resume() marks stream as resumed')
+  t.alike(buffered, ['hello'], '.pause() prevents data to be read')
+  t.is(r.resume(), r, '.resume() returns self')
+  t.is(Readable.isPaused(r), false, '.resume() marks stream as resumed')
   await nextImmediate()
-  t.same(buffered, ['hello', 'world'])
+  t.alike(buffered, ['hello', 'world'])
   r.push(null)
 })
 
-tape('resume', function (t) {
+test('resume', function (t) {
+  t.plan(3)
+
   const r = new Readable()
   let ended = 0
 
@@ -57,13 +60,12 @@ tape('resume', function (t) {
   r.on('end', () => ended++)
   r.on('close', function () {
     t.pass('closed')
-    t.same(ended, 1)
+    t.is(ended, 1)
     t.ok(r.destroyed)
-    t.end()
   })
 })
 
-tape('lazy open', async function (t) {
+test('lazy open', async function (t) {
   let opened = false
   const r = new Readable({
     open (cb) {
@@ -72,14 +74,13 @@ tape('lazy open', async function (t) {
     }
   })
   await nextImmediate()
-  t.notOk(opened)
+  t.absent(opened)
   r.push(null)
   await nextImmediate()
   t.ok(opened)
-  t.end()
 })
 
-tape('eager open', async function (t) {
+test('eager open', async function (t) {
   let opened = false
   const r = new Readable({
     open (cb) {
@@ -91,10 +92,9 @@ tape('eager open', async function (t) {
   await nextImmediate()
   t.ok(opened)
   r.push(null)
-  t.end()
 })
 
-tape('shorthands', function (t) {
+test('shorthands', function (t) {
   t.plan(3 + 1)
 
   const r = new Readable({
@@ -109,14 +109,14 @@ tape('shorthands', function (t) {
   })
 
   r.once('readable', function () {
-    t.same(r.read(), 'hello')
-    t.same(r.read(), 'hello')
+    t.is(r.read(), 'hello')
+    t.is(r.read(), 'hello')
     r.destroy()
-    t.same(r.read(), null)
+    t.is(r.read(), null)
   })
 })
 
-tape('both push and the cb needs to be called for re-reads', function (t) {
+test('both push and the cb needs to be called for re-reads', function (t) {
   t.plan(2)
 
   let once = true
@@ -137,27 +137,31 @@ tape('both push and the cb needs to be called for re-reads', function (t) {
   }, 100)
 })
 
-tape('from array', function (t) {
+test('from array', function (t) {
+  t.plan(1)
+
   const inc = []
   const r = Readable.from([1, 2, 3])
   r.on('data', data => inc.push(data))
   r.on('end', function () {
-    t.same(inc, [1, 2, 3])
-    t.end()
+    t.alike(inc, [1, 2, 3])
   })
 })
 
-tape('from buffer', function (t) {
+test('from buffer', function (t) {
+  t.plan(1)
+
   const inc = []
   const r = Readable.from(Buffer.from('hello'))
   r.on('data', data => inc.push(data))
   r.on('end', function () {
-    t.same(inc, [Buffer.from('hello')])
-    t.end()
+    t.alike(inc, [Buffer.from('hello')])
   })
 })
 
-tape('from async iterator', function (t) {
+test('from async iterator', function (t) {
+  t.plan(1)
+
   async function * test () {
     yield 1
     yield 2
@@ -168,28 +172,25 @@ tape('from async iterator', function (t) {
   const r = Readable.from(test())
   r.on('data', data => inc.push(data))
   r.on('end', function () {
-    t.same(inc, [1, 2, 3])
-    t.end()
+    t.alike(inc, [1, 2, 3])
   })
 })
 
-tape('from array with highWaterMark', function (t) {
+test('from array with highWaterMark', function (t) {
   const r = Readable.from([1, 2, 3], { highWaterMark: 1 })
-  t.same(r._readableState.highWaterMark, 1)
-  t.end()
+  t.is(r._readableState.highWaterMark, 1)
 })
 
-tape('from async iterator with highWaterMark', function (t) {
+test('from async iterator with highWaterMark', function (t) {
   async function * test () {
     yield 1
   }
 
   const r = Readable.from(test(), { highWaterMark: 1 })
-  t.same(r._readableState.highWaterMark, 1)
-  t.end()
+  t.is(r._readableState.highWaterMark, 1)
 })
 
-tape('unshift', async function (t) {
+test('unshift', async function (t) {
   const r = new Readable()
   r.push(1)
   r.push(2)
@@ -199,35 +200,33 @@ tape('unshift', async function (t) {
   for await (const entry of r) {
     inc.push(entry)
   }
-  t.same(inc, [0, 1, 2])
-  t.end()
+  t.alike(inc, [0, 1, 2])
 })
 
-tape('from readable should return the original readable', function (t) {
+test('from readable should return the original readable', function (t) {
   const r = new Readable()
-  t.equal(Readable.from(r), r)
-  t.end()
+  t.is(Readable.from(r), r)
 })
 
-tape('map readable data', async function (t) {
-  t.plan(1)
+test('map readable data', async function (t) {
   const r = new Readable({
     map: input => JSON.parse(input)
   })
   r.push('{ "foo": 1 }')
-  for await (const obj of r) {
-    t.deepEquals(obj, { foo: 1 })
+  for await (const obj of r) { // eslint-disable-line
+    t.alike(obj, { foo: 1 })
+    break
   }
 })
 
-tape('use mapReadable to map data', async function (t) {
-  t.plan(1)
+test('use mapReadable to map data', async function (t) {
   const r = new Readable({
     map: () => t.fail('.mapReadable has priority'),
     mapReadable: input => JSON.parse(input)
   })
   r.push('{ "foo": 1 }')
-  for await (const obj of r) {
-    t.deepEquals(obj, { foo: 1 })
+  for await (const obj of r) { // eslint-disable-line
+    t.alike(obj, { foo: 1 })
+    break
   }
 })

@@ -1,21 +1,24 @@
-const tape = require('tape')
+const test = require('brittle')
 const { pipeline, pipelinePromise, Transform, Readable, Writable } = require('../')
 
-tape('piping to a writable', function (t) {
-  t.plan(1)
+test('piping to a writable', function (t) {
+  t.plan(2)
+
   const w = pipeline(
     Readable.from('hello'),
     new Writable({
       write (data, cb) {
-        t.equals(data, 'hello')
+        t.is(data, 'hello')
         cb()
       }
     })
   )
-  w.on('close', () => t.end())
+  w.on('close', () => t.pass('closed'))
 })
 
-tape('piping with error', function (t) {
+test('piping with error', function (t) {
+  t.plan(1)
+
   const r = new Readable()
   const w = new Writable()
   const err = new Error()
@@ -23,29 +26,30 @@ tape('piping with error', function (t) {
     r,
     w,
     (error) => {
-      t.equals(error, err)
-      t.end()
+      t.alike(error, err)
     }
   )
   r.destroy(err)
 })
 
-tape('piping with final callback', function (t) {
-  t.plan(1)
+test('piping with final callback', function (t) {
+  t.plan(2)
+
   pipeline(
     Readable.from('hello'),
     new Writable({
       write (data, cb) {
-        t.equals(data, 'hello')
+        t.is(data, 'hello')
         cb()
       }
     }),
-    () => t.end()
+    () => t.pass('ended')
   )
 })
 
-tape('piping with transform stream inbetween', function (t) {
-  t.plan(1)
+test('piping with transform stream inbetween', function (t) {
+  t.plan(2)
+
   pipeline(
     [
       Readable.from('hello'),
@@ -57,31 +61,33 @@ tape('piping with transform stream inbetween', function (t) {
       }),
       new Writable({
         write (data, cb) {
-          t.equals(data, 5)
+          t.is(data, 5)
           cb()
         }
       })
     ],
-    () => t.end()
+    () => t.pass('ended')
   )
 })
 
-tape('piping to a writable', function (t) {
-  t.plan(1)
+test('piping to a writable', function (t) {
+  t.plan(2)
+
   const w = pipeline(
     Readable.from('hello'),
     new Writable({
       write (data, cb) {
-        t.equals(data, 'hello')
+        t.is(data, 'hello')
         cb()
       }
     })
   )
-  w.on('close', () => t.end())
+  w.on('close', () => t.pass('closed'))
 })
 
-tape('piping to a writable + promise', async function (t) {
+test('piping to a writable + promise', async function (t) {
   t.plan(2)
+
   const r = Readable.from('hello')
   let closed = false
   r.on('close', () => {
@@ -91,11 +97,10 @@ tape('piping to a writable + promise', async function (t) {
     r,
     new Writable({
       write (data, cb) {
-        t.equals(data, 'hello')
+        t.is(data, 'hello')
         cb()
       }
     })
   )
   t.ok(closed)
-  t.end()
 })

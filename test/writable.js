@@ -1,9 +1,10 @@
-const tape = require('tape')
+const test = require('brittle')
 const tick = require('queue-tick')
 const { Writable, Duplex } = require('../')
 
-tape('opens before writes', function (t) {
+test('opens before writes', function (t) {
   t.plan(2)
+
   const trace = []
   const stream = new Writable({
     open (cb) {
@@ -16,14 +17,16 @@ tape('opens before writes', function (t) {
     }
   })
   stream.on('close', () => {
-    t.equals(trace.length, 2)
-    t.equals(trace[0], 'open')
+    t.is(trace.length, 2)
+    t.is(trace[0], 'open')
   })
   stream.write('data')
   stream.end()
 })
 
-tape('drain', function (t) {
+test('drain', function (t) {
+  t.plan(2)
+
   const stream = new Writable({
     highWaterMark: 1,
     write (data, cb) {
@@ -31,14 +34,13 @@ tape('drain', function (t) {
     }
   })
 
-  t.notOk(stream.write('a'))
+  t.absent(stream.write('a'))
   stream.on('drain', function () {
     t.pass('drained')
-    t.end()
   })
 })
 
-tape('drain multi write', function (t) {
+test('drain multi write', function (t) {
   t.plan(4)
 
   const stream = new Writable({
@@ -48,16 +50,17 @@ tape('drain multi write', function (t) {
     }
   })
 
-  t.notOk(stream.write('a'))
-  t.notOk(stream.write('a'))
-  t.notOk(stream.write('a'))
+  t.absent(stream.write('a'))
+  t.absent(stream.write('a'))
+  t.absent(stream.write('a'))
   stream.on('drain', function () {
     t.pass('drained')
-    t.end()
   })
 })
 
-tape('drain async write', function (t) {
+test('drain async write', function (t) {
+  t.plan(3)
+
   let flushed = false
 
   const stream = new Writable({
@@ -70,20 +73,21 @@ tape('drain async write', function (t) {
     }
   })
 
-  t.notOk(stream.write('a'))
-  t.notOk(flushed)
+  t.absent(stream.write('a'))
+  t.absent(flushed)
   stream.on('drain', function () {
     t.ok(flushed)
-    t.end()
   })
 })
 
-tape('writev', function (t) {
+test('writev', function (t) {
+  t.plan(3)
+
   const expected = [[], ['ho']]
 
   const s = new Writable({
     writev (batch, cb) {
-      t.same(batch, expected.shift())
+      t.alike(batch, expected.shift())
       cb(null)
     }
   })
@@ -99,48 +103,50 @@ tape('writev', function (t) {
   })
 
   s.on('finish', function () {
-    t.end()
+    t.pass('finished')
   })
 })
 
-tape('map written data', function (t) {
-  t.plan(1)
+test('map written data', function (t) {
+  t.plan(2)
+
   const r = new Writable({
     write (data, cb) {
-      t.equals(data, '{"foo":1}')
+      t.is(data, '{"foo":1}')
       cb()
     },
     map: input => JSON.stringify(input)
   })
-  r.on('end', () => {
-    t.end()
+  r.on('finish', () => {
+    t.pass('finished')
   })
   r.write({ foo: 1 })
   r.end()
 })
 
-tape('use mapWritable to map data', function (t) {
-  t.plan(1)
+test('use mapWritable to map data', function (t) {
+  t.plan(2)
+
   const r = new Writable({
     write (data, cb) {
-      t.equals(data, '{"foo":1}')
+      t.is(data, '{"foo":1}')
       cb()
     },
     map: () => t.fail('.mapWritable has priority'),
     mapWritable: input => JSON.stringify(input)
   })
-  r.on('end', () => {
-    t.end()
+  r.on('finish', () => {
+    t.pass('finished')
   })
   r.write({ foo: 1 })
   r.end()
 })
 
-tape('many ends', function (t) {
+test('many ends', function (t) {
+  t.plan(2)
+
   let finals = 0
   let finish = 0
-
-  t.plan(2)
 
   const s = new Duplex({
     final (cb) {
@@ -159,7 +165,7 @@ tape('many ends', function (t) {
 
   s.on('finish', function () {
     finish++
-    t.equals(finals, 1)
-    t.equals(finish, 1)
+    t.is(finals, 1)
+    t.is(finish, 1)
   })
 })

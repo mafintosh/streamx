@@ -1,8 +1,7 @@
-const tape = require('tape')
+const test = require('brittle')
 const { Readable } = require('../')
-const { AbortController } = require('abort-controller')
 
-tape('streams are async iterators', async function (t) {
+test('streams are async iterators', async function (t) {
   const data = ['a', 'b', 'c', null]
   const expected = data.slice(0)
 
@@ -14,14 +13,13 @@ tape('streams are async iterators', async function (t) {
   })
 
   for await (const chunk of r) {
-    t.same(chunk, expected.shift())
+    t.is(chunk, expected.shift())
   }
 
-  t.same(expected, [null])
-  t.end()
+  t.is(expected.shift(), null)
 })
 
-tape('break out of iterator', async function (t) {
+test('break out of iterator', async function (t) {
   const r = new Readable({
     read (cb) {
       this.push('tick')
@@ -36,14 +34,12 @@ tape('break out of iterator', async function (t) {
   let runs = 10
 
   for await (const chunk of r) {
-    t.same(chunk, 'tick')
+    t.is(chunk, 'tick')
     if (--runs === 0) break
   }
-
-  t.end()
 })
 
-tape('throw out of iterator', async function (t) {
+test('throw out of iterator', async function (t) {
   const r = new Readable({
     read (cb) {
       this.push('tick')
@@ -57,19 +53,15 @@ tape('throw out of iterator', async function (t) {
 
   let runs = 10
 
-  try {
+  await t.exception(async function () {
     for await (const chunk of r) {
-      t.same(chunk, 'tick')
+      t.is(chunk, 'tick')
       if (--runs === 0) throw new Error('stop')
     }
-  } catch (err) {
-    t.same(err, new Error('stop'))
-  }
-
-  t.end()
+  })
 })
 
-tape('intertesting timing', async function (t) {
+test('intertesting timing', async function (t) {
   const r = new Readable({
     read (cb) {
       setImmediate(() => {
@@ -94,11 +86,10 @@ tape('intertesting timing', async function (t) {
     await new Promise(resolve => setTimeout(resolve, 10))
   }
 
-  t.same(iterated, ['a', 'b', 'c'])
-  t.end()
+  t.alike(iterated, ['a', 'b', 'c'])
 })
 
-tape('intertesting timing with close', async function (t) {
+test('intertesting timing with close', async function (t) {
   t.plan(3)
 
   const r = new Readable({
@@ -118,37 +109,33 @@ tape('intertesting timing with close', async function (t) {
 
   const iterated = []
 
-  try {
+  await t.exception(async function () {
     for await (const chunk of r) {
       iterated.push(chunk)
       await new Promise(resolve => setTimeout(resolve, 10))
     }
-  } catch (err) {
-    t.same(err, new Error('stop'))
-  }
+  })
 
-  t.same(iterated, ['a'])
-  t.end()
+  t.alike(iterated, ['a'])
 })
 
-tape('cleaning up a closed iterator', async function (t) {
+test('cleaning up a closed iterator', async function (t) {
   const r = new Readable()
   r.push('a')
   t.plan(1)
 
   const fn = async () => {
-    for await (const chunk of r) {
+    for await (const chunk of r) { // eslint-disable-line
       r.destroy()
       await new Promise(resolve => r.once('close', resolve))
-      t.same(chunk, 'a')
+      t.is(chunk, 'a')
       return
     }
   }
   await fn()
-  t.end()
 })
 
-tape('using abort controller', async function (t) {
+test('using abort controller', async function (t) {
   function createInfinite (signal) {
     let count = 0
     const r = new Readable({ signal })
@@ -159,19 +146,18 @@ tape('using abort controller', async function (t) {
   }
   const controller = new AbortController()
   const inc = []
-  setTimeout(() => controller.abort(), 10)
-  try {
+  setImmediate(() => controller.abort())
+
+  await t.exception(async function () {
     for await (const chunk of createInfinite(controller.signal)) {
       inc.push(chunk)
     }
-  } catch (err) {
-    t.same(err.message, 'Stream aborted.')
-  }
-  t.same(inc, [0])
-  t.end()
+  })
+
+  t.alike(inc, [0])
 })
 
-tape('from async iterator and to async iterator', async function (t) {
+test('from async iterator and to async iterator', async function (t) {
   const expected = []
 
   const stream = Readable.from(async function * () {
@@ -183,6 +169,5 @@ tape('from async iterator and to async iterator', async function (t) {
     expected.push(data)
   }
 
-  t.same(expected, ['a', 'b'])
-  t.end()
+  t.alike(expected, ['a', 'b'])
 })
