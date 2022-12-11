@@ -1,5 +1,5 @@
 const tape = require('tape')
-const { Duplex } = require('../')
+const { Duplex, getStreamError } = require('../')
 
 tape('if open does not end, it should stall', function (t) {
   t.plan(1)
@@ -41,4 +41,15 @@ tape('Using both mapReadable and mapWritable to map data', function (t) {
   })
   d.write('32')
   d.end()
+})
+
+tape('get error from stream', function (t) {
+  const d = new Duplex()
+  d.on('error', () => {})
+
+  const err = new Error('stop')
+  d.destroy(err)
+  t.same(getStreamError(d), err)
+
+  t.end()
 })

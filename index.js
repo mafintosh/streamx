@@ -960,6 +960,10 @@ function isStreamx (stream) {
   return typeof stream._duplexState === 'number' && isStream(stream)
 }
 
+function getStreamError (stream) {
+  return (stream._readableState && stream._readableState.error) || (stream._writableState && stream._writableState.error)
+}
+
 function isReadStreamx (stream) {
   return isStreamx(stream) && stream.readable
 }
@@ -983,6 +987,7 @@ module.exports = {
   pipelinePromise,
   isStream,
   isStreamx,
+  getStreamError,
   Stream,
   Writable,
   Readable,
