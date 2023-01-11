@@ -7,29 +7,32 @@ const FIFO = require('fast-fifo')
 
 /* eslint-disable no-multi-spaces */
 
-const MAX = ((1 << 25) - 1)
+// 26 bits used total (4 from shared, 13 from read, and 9 from write)
+const MAX = ((1 << 26) - 1)
 
 // Shared state
-const OPENING     = 0b001
-const DESTROYING  = 0b010
-const DESTROYED   = 0b100
+const OPENING       = 0b0001
+const PREDESTROYING = 0b0010
+const DESTROYING    = 0b0100
+const DESTROYED     = 0b1000
 
 const NOT_OPENING = MAX ^ OPENING
+const NOT_PREDESTROYING = MAX ^ PREDESTROYING
 
-// Read state
-const READ_ACTIVE           = 0b0000000000001 << 3
-const READ_PRIMARY          = 0b0000000000010 << 3
-const READ_SYNC             = 0b0000000000100 << 3
-const READ_QUEUED           = 0b0000000001000 << 3
-const READ_RESUMED          = 0b0000000010000 << 3
-const READ_PIPE_DRAINED     = 0b0000000100000 << 3
-const READ_ENDING           = 0b0000001000000 << 3
-const READ_EMIT_DATA        = 0b0000010000000 << 3
-const READ_EMIT_READABLE    = 0b0000100000000 << 3
-const READ_EMITTED_READABLE = 0b0001000000000 << 3
-const READ_DONE             = 0b0010000000000 << 3
-const READ_NEXT_TICK        = 0b0100000000001 << 3 // also active
-const READ_NEEDS_PUSH       = 0b1000000000000 << 3
+// Read state (4 bit offset from shared state)
+const READ_ACTIVE           = 0b0000000000001 << 4
+const READ_PRIMARY          = 0b0000000000010 << 4
+const READ_SYNC             = 0b0000000000100 << 4
+const READ_QUEUED           = 0b0000000001000 << 4
+const READ_RESUMED          = 0b0000000010000 << 4
+const READ_PIPE_DRAINED     = 0b0000000100000 << 4
+const READ_ENDING           = 0b0000001000000 << 4
+const READ_EMIT_DATA        = 0b0000010000000 << 4
+const READ_EMIT_READABLE    = 0b0000100000000 << 4
+const READ_EMITTED_READABLE = 0b0001000000000 << 4
+const READ_DONE             = 0b0010000000000 << 4
+const READ_NEXT_TICK        = 0b0100000000001 << 4 // also active
+const READ_NEEDS_PUSH       = 0b1000000000000 << 4
 
 // Combined read state
 const READ_FLOWING = READ_RESUMED | READ_PIPE_DRAINED
@@ -49,16 +52,16 @@ const READ_NOT_ENDING             = MAX ^ READ_ENDING
 const READ_PIPE_NOT_DRAINED       = MAX ^ READ_FLOWING
 const READ_NOT_NEXT_TICK          = MAX ^ READ_NEXT_TICK
 
-// Write state
-const WRITE_ACTIVE     = 0b000000001 << 16
-const WRITE_PRIMARY    = 0b000000010 << 16
-const WRITE_SYNC       = 0b000000100 << 16
-const WRITE_QUEUED     = 0b000001000 << 16
-const WRITE_UNDRAINED  = 0b000010000 << 16
-const WRITE_DONE       = 0b000100000 << 16
-const WRITE_EMIT_DRAIN = 0b001000000 << 16
-const WRITE_NEXT_TICK  = 0b010000001 << 16 // also active
-const WRITE_FINISHING  = 0b100000000 << 16
+// Write state (17 bit offset, 4 bit offset from shared state and 13 from read state)
+const WRITE_ACTIVE     = 0b000000001 << 17
+const WRITE_PRIMARY    = 0b000000010 << 17
+const WRITE_SYNC       = 0b000000100 << 17
+const WRITE_QUEUED     = 0b000001000 << 17
+const WRITE_UNDRAINED  = 0b000010000 << 17
+const WRITE_DONE       = 0b000100000 << 17
+const WRITE_EMIT_DRAIN = 0b001000000 << 17
+const WRITE_NEXT_TICK  = 0b010000001 << 17 // also active
+const WRITE_FINISHING  = 0b100000000 << 17
 
 const WRITE_NOT_ACTIVE    = MAX ^ WRITE_ACTIVE
 const WRITE_NOT_SYNC      = MAX ^ WRITE_SYNC
@@ -72,7 +75,7 @@ const WRITE_NOT_NEXT_TICK = MAX ^ WRITE_NEXT_TICK
 const ACTIVE = READ_ACTIVE | WRITE_ACTIVE
 const NOT_ACTIVE = MAX ^ ACTIVE
 const DONE = READ_DONE | WRITE_DONE
-const DESTROY_STATUS = DESTROYING | DESTROYED
+const DESTROY_STATUS = DESTROYING | DESTROYED | PREDESTROYING
 const OPEN_STATUS = DESTROY_STATUS | OPENING
 const AUTO_DESTROY = DESTROY_STATUS | DONE
 const NON_PRIMARY = WRITE_NON_PRIMARY & READ_NON_PRIMARY
@@ -563,6 +566,11 @@ class Stream extends EventEmitter {
     if ((this._duplexState & DESTROY_STATUS) === 0) {
       if (!err) err = STREAM_DESTROYED
       this._duplexState = (this._duplexState | DESTROYING) & NON_PRIMARY
+
+      this._duplexState |= PREDESTROYING
+      this._predestroy()
+      this._duplexState &= NOT_PREDESTROYING
+
       if (this._readableState !== null) {
         this._readableState.error = err
         this._readableState.updateNextTick()
@@ -571,7 +579,6 @@ class Stream extends EventEmitter {
         this._writableState.error = err
         this._writableState.updateNextTick()
       }
-      this._predestroy()
     }
   }
 
