@@ -567,18 +567,15 @@ class Stream extends EventEmitter {
       if (!err) err = STREAM_DESTROYED
       this._duplexState = (this._duplexState | DESTROYING) & NON_PRIMARY
 
+      if (this._readableState !== null) this._readableState.error = err
+      if (this._writableState !== null) this._writableState.error = err
+
       this._duplexState |= PREDESTROYING
       this._predestroy()
       this._duplexState &= NOT_PREDESTROYING
 
-      if (this._readableState !== null) {
-        this._readableState.error = err
-        this._readableState.updateNextTick()
-      }
-      if (this._writableState !== null) {
-        this._writableState.error = err
-        this._writableState.updateNextTick()
-      }
+      if (this._readableState !== null) this._readableState.updateNextTick()
+      if (this._writableState !== null) this._writableState.updateNextTick()
     }
   }
 
