@@ -55,3 +55,47 @@ test('get error from stream', function (t) {
 
   t.end()
 })
+
+test('duplex write callback', function (t) {
+  t.plan(4)
+
+  const stream = new Duplex({
+    write (data, cb) {
+      t.pass('internal _write')
+      stream.push(data)
+      cb(null)
+    },
+    final (cb) {
+      stream.push(null)
+      cb()
+    }
+  })
+
+  stream.write('a', function (err) {
+    t.absent(err, 'write callback')
+  })
+  stream.end()
+
+  stream.on('data', function () {
+    t.pass('consume data')
+  })
+
+  stream.on('close', function () {
+    t.pass('stream closed')
+  })
+})
+
+test('auto duplex write callback', function (t) {
+  t.plan(2)
+
+  const stream = new Duplex()
+
+  stream.on('close', function () {
+    t.pass('stream closed')
+  })
+
+  stream.write('a', function (err) {
+    t.absent(err, 'write callback')
+    stream.destroy()
+  })
+})

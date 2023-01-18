@@ -122,11 +122,11 @@ class WritableState {
     return (this.stream._duplexState & WRITE_DONE) !== 0
   }
 
-  push (data) {
+  push (data, userCallback) {
     if (this.map !== null) data = this.map(data)
 
     this.buffered += this.byteLength(data)
-    this.queue.push(data)
+    this.queue.push({ data, userCallback }) // + could push two values, and later optimize shifts by doing an extra shift() to discard cb, etc
 
     if (this.buffered < this.highWaterMark) {
       this.stream._duplexState |= WRITE_QUEUED
@@ -138,13 +138,13 @@ class WritableState {
   }
 
   shift () {
-    const data = this.queue.shift()
+    const item = this.queue.shift()
     const stream = this.stream
 
-    this.buffered -= this.byteLength(data)
+    this.buffered -= this.byteLength(item.data)
     if (this.buffered === 0) stream._duplexState &= WRITE_NOT_QUEUED
 
-    return data
+    return item
   }
 
   end (data) {
@@ -153,13 +153,25 @@ class WritableState {
     this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
   }
 
+  /* end (data, cb) {
+    if (typeof data === 'function') {
+      cb = data
+      data = undefined
+    }
+
+    if (typeof cb === 'function') this.stream.once('finish', cb)
+
+    if (data !== undefined && data !== null) this.push(data)
+    this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
+  } */
+
   autoBatch (data, cb) {
     const buffer = []
     const stream = this.stream
 
     buffer.push(data)
     while ((stream._duplexState & WRITE_STATUS) === WRITE_QUEUED_AND_ACTIVE) {
-      buffer.push(stream._writableState.shift())
+      buffer.push(stream._writableState.shift().data)
     }
 
     if ((stream._duplexState & OPEN_STATUS) !== 0) return cb(null)
@@ -170,9 +182,12 @@ class WritableState {
     const stream = this.stream
 
     while ((stream._duplexState & WRITE_STATUS) === WRITE_QUEUED) {
-      const data = this.shift()
+      const item = this.shift()
       stream._duplexState |= WRITE_ACTIVE_AND_SYNC
-      stream._write(data, this.afterWrite)
+      stream._write(item.data, (err) => {
+        if (item.userCallback) item.userCallback(err)
+        this.afterWrite(err)
+      })
       stream._duplexState &= WRITE_NOT_SYNC
     }
 
@@ -790,9 +805,9 @@ class Writable extends Stream {
     return (ws._duplexState & WRITE_BACKPRESSURE_STATUS) !== 0
   }
 
-  write (data) {
+  write (data, userCallback) {
     this._writableState.updateNextTick()
-    return this._writableState.push(data)
+    return this._writableState.push(data, userCallback)
   }
 
   end (data) {
@@ -828,9 +843,9 @@ class Duplex extends Readable { // and Writable
     cb(null)
   }
 
-  write (data) {
+  write (data, userCallback) {
     this._writableState.updateNextTick()
-    return this._writableState.push(data)
+    return this._writableState.push(data, userCallback)
   }
 
   end (data) {
