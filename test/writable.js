@@ -169,3 +169,89 @@ test('many ends', function (t) {
     t.is(finish, 1)
   })
 })
+
+// + note: "end callback without data" was already supported before the PR
+test('end callback without data', function (t) {
+  t.plan(2)
+
+  const stream = new Writable({
+    write (data, cb) {
+      t.fail('should not call write')
+    }
+  })
+
+  stream.end(function () {
+    t.pass('stream ended')
+  })
+
+  stream.on('close', function () {
+    t.pass('stream closed')
+  })
+})
+
+test('end callback with data', function (t) {
+  t.plan(2)
+
+  const stream = new Writable({
+    write (data, cb) {
+      t.pass('write')
+      cb(null)
+    }
+  })
+
+  stream.end('a', function () {
+    t.fail('this should not be called') // + actually we could support this quite easily, but it could be misunderstood by user callback vs stream callback! but just to ensure that it's working as before PR
+  })
+
+  stream.on('close', function () {
+    t.pass('stream closed')
+  })
+})
+
+test('write callback', function (t) {
+  t.plan(3)
+
+  const userCallback = function () {
+    t.pass('user write callback')
+  }
+
+  const stream = new Writable({
+    write (data, cb, callback) {
+      t.is(callback, userCallback, 'callback is same instance as write callback')
+      callback()
+      cb(null)
+    }
+  })
+
+  stream.write('a', userCallback)
+  stream.end()
+
+  stream.on('close', function () {
+    t.pass('stream closed')
+  })
+})
+
+test('end callback', function (t) {
+  t.plan(3)
+
+  const userCallback = function () {
+    t.pass('user write callback')
+  }
+
+  const stream = new Writable({
+    write (data, cb, callback) {
+      if (callback) {
+        t.is(callback, userCallback, 'callback is same instance as write callback')
+        callback()
+      }
+      cb(null)
+    }
+  })
+
+  stream.write('a', userCallback)
+  stream.end('b')
+
+  stream.on('close', function () {
+    t.pass('stream closed')
+  })
+})

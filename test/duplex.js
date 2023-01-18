@@ -55,3 +55,36 @@ test('get error from stream', function (t) {
 
   t.end()
 })
+
+test('write callback', function (t) {
+  t.plan(4)
+
+  const userCallback = function () {
+    t.pass('user write callback')
+  }
+
+  const stream = new Duplex({
+    write (data, cb, callback) {
+      t.is(callback, userCallback, 'callback is same instance as write callback')
+      stream.push(data)
+      callback()
+      cb(null)
+    },
+    final (cb) {
+      stream.push(null)
+      cb()
+    }
+  })
+
+  stream.write('a', userCallback)
+  stream.end()
+
+  // For some reason this seems required
+  stream.on('data', function () {
+    t.pass('consume data')
+  })
+
+  stream.on('close', function () {
+    t.pass('stream closed')
+  })
+})
