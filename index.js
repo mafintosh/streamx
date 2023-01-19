@@ -147,13 +147,7 @@ class WritableState {
     return item
   }
 
-  end (data) {
-    if (typeof data === 'function') this.stream.once('finish', data)
-    else if (data !== undefined && data !== null) this.push(data)
-    this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
-  }
-
-  /* end (data, cb) {
+  end (data, cb) {
     if (typeof data === 'function') {
       cb = data
       data = undefined
@@ -163,7 +157,7 @@ class WritableState {
 
     if (data !== undefined && data !== null) this.push(data)
     this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
-  } */
+  }
 
   autoBatch (data, cb) {
     const buffer = []
@@ -810,9 +804,9 @@ class Writable extends Stream {
     return this._writableState.push(data, userCallback)
   }
 
-  end (data) {
+  end (data, userCallback) {
     this._writableState.updateNextTick()
-    this._writableState.end(data)
+    this._writableState.end(data, userCallback)
     return this
   }
 }
@@ -848,9 +842,9 @@ class Duplex extends Readable { // and Writable
     return this._writableState.push(data, userCallback)
   }
 
-  end (data) {
+  end (data, userCallback) {
     this._writableState.updateNextTick()
-    this._writableState.end(data)
+    this._writableState.end(data, userCallback)
     return this
   }
 }

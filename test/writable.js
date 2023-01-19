@@ -170,46 +170,8 @@ test('many ends', function (t) {
   })
 })
 
-// + note: "end callback without data" was already supported before the PR
-test('end callback without data', function (t) {
-  t.plan(2)
-
-  const stream = new Writable({
-    write (data, cb) {
-      t.fail('should not call write')
-    }
-  })
-
-  stream.end(function () {
-    t.pass('stream ended')
-  })
-
-  stream.on('close', function () {
-    t.pass('stream closed')
-  })
-})
-
-test('end callback with data', function (t) {
-  t.plan(2)
-
-  const stream = new Writable({
-    write (data, cb) {
-      t.pass('write')
-      cb(null)
-    }
-  })
-
-  stream.end('a', function () {
-    t.fail('this should not be called') // + actually we could support this quite easily, but it could be misunderstood by user callback vs stream callback! but just to ensure that it's working as before PR
-  })
-
-  stream.on('close', function () {
-    t.pass('stream closed')
-  })
-})
-
-test('writable write callback', function (t) {
-  t.plan(3)
+test('writable: write/end callbacks', function (t) {
+  t.plan(5)
 
   const stream = new Writable({
     write (data, cb) {
@@ -221,22 +183,28 @@ test('writable write callback', function (t) {
   stream.write('a', function (err) {
     t.absent(err, 'write callback')
   })
-  stream.end()
+
+  stream.end('b', function () {
+    t.pass('end callback')
+  })
 
   stream.on('close', function () {
     t.pass('stream closed')
   })
 })
 
-test('auto writable with write callback', function (t) {
-  t.plan(2)
+test('auto writable: write/end callbacks', function (t) {
+  t.plan(3)
 
   const stream = new Writable()
 
   stream.write('a', function (err) {
     t.absent(err, 'write callback')
   })
-  stream.end()
+
+  stream.end('b', function () {
+    t.pass('end callback (finished)')
+  })
 
   stream.on('close', function () {
     t.pass('stream closed')
@@ -256,6 +224,7 @@ test('writable end without callback', function (t) {
   stream.write('a', function (err) {
     t.absent(err, 'write callback')
   })
+
   stream.end('b')
 
   stream.on('close', function () {
@@ -263,4 +232,45 @@ test('writable end without callback', function (t) {
   })
 })
 
-test.skip('writable end with callback', function (t) {})
+test('writable: end data without callback', function (t) {
+  t.plan(5)
+
+  const stream = new Writable({
+    write (data, cb) {
+      t.pass('internal _write')
+      cb(null)
+    }
+  })
+
+  stream.write('a', function (err) {
+    t.absent(err, 'write callback')
+  })
+
+  stream.end('b')
+
+  stream.once('finish', function () {
+    t.pass('stream finished')
+  })
+
+  stream.on('close', function () {
+    t.pass('stream closed')
+  })
+})
+
+test('writable: end callback', function (t) {
+  t.plan(2)
+
+  const stream = new Writable({
+    write (data, cb) {
+      t.fail('should not call write')
+    }
+  })
+
+  stream.end(function () {
+    t.pass('end callback (finished)')
+  })
+
+  stream.on('close', function () {
+    t.pass('stream closed')
+  })
+})
