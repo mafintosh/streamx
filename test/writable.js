@@ -252,7 +252,7 @@ test('writable: writev callbacks', function (t) {
 
   s.on('drain', function () {
     s.write('last', function (err) {
-      if (count++ !== 100) t.fail('incorrect order for write callback -after drain- (100 vs ' + i + ')')
+      if (count++ !== 100) t.fail('incorrect order for write callback (after drain)')
       if (err !== null) t.fail('err should be null')
     })
     s.end()
