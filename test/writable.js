@@ -228,3 +228,37 @@ test('writable: end callback', function (t) {
   stream.on('finish', () => t.pass('stream finished'))
   stream.on('close', () => t.pass('stream closed'))
 })
+
+test('writable: writev callbacks', function (t) {
+  t.plan(3)
+
+  const expected = [[], ['last']]
+  let count = 0
+
+  const s = new Writable({
+    writev (batch, cb) {
+      t.alike(batch, expected.shift())
+      cb(null)
+    }
+  })
+
+  for (let i = 0; i < 100; i++) {
+    expected[0].push('hi-' + i)
+    s.write('hi-' + i, function (err) {
+      if (count++ !== i) t.fail('incorrect order for write callback (' + (count - 1) + ' vs ' + i + ')')
+      if (err !== null) t.fail('err should be null')
+    })
+  }
+
+  s.on('drain', function () {
+    s.write('last', function (err) {
+      if (count++ !== 100) t.fail('incorrect order for write callback -after drain- (100 vs ' + i + ')')
+      if (err !== null) t.fail('err should be null')
+    })
+    s.end()
+  })
+
+  s.on('finish', function () {
+    t.pass('finished')
+  })
+})

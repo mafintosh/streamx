@@ -161,15 +161,26 @@ class WritableState {
 
   autoBatch (data, cb) {
     const buffer = []
+    const userCallbacks = []
     const stream = this.stream
+
+    const callback = (err) => {
+      cb(err, false)
+      for (const userCallback of userCallbacks) {
+        if (userCallback) userCallback(err)
+      }
+      this.afterWrite(err)
+    }
 
     buffer.push(data)
     while ((stream._duplexState & WRITE_STATUS) === WRITE_QUEUED_AND_ACTIVE) {
-      buffer.push(stream._writableState.shift().data)
+      const item = stream._writableState.shift()
+      buffer.push(item.data)
+      userCallbacks.push(item.userCallback)
     }
 
-    if ((stream._duplexState & OPEN_STATUS) !== 0) return cb(null)
-    stream._writev(buffer, cb)
+    if ((stream._duplexState & OPEN_STATUS) !== 0) return callback(null)
+    stream._writev(buffer, callback)
   }
 
   update () {
@@ -178,9 +189,10 @@ class WritableState {
     while ((stream._duplexState & WRITE_STATUS) === WRITE_QUEUED) {
       const item = this.shift()
       stream._duplexState |= WRITE_ACTIVE_AND_SYNC
-      stream._write(item.data, (err) => {
+      // + could use an internal boolean like: stream.shouldAfterWrite = false (which is enabled by default), only for autoBase use
+      stream._write(item.data, (err, afterWrite = true) => {
         if (item.userCallback) item.userCallback(err)
-        this.afterWrite(err)
+        if (afterWrite) this.afterWrite(err)
       })
       stream._duplexState &= WRITE_NOT_SYNC
     }
