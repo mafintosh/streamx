@@ -211,27 +211,6 @@ test('auto writable: write/end callbacks', function (t) {
   })
 })
 
-test('writable end without callback', function (t) {
-  t.plan(4)
-
-  const stream = new Writable({
-    write (data, cb) {
-      t.pass('internal _write')
-      cb(null)
-    }
-  })
-
-  stream.write('a', function (err) {
-    t.absent(err, 'write callback')
-  })
-
-  stream.end('b')
-
-  stream.on('close', function () {
-    t.pass('stream closed')
-  })
-})
-
 test('writable: end data without callback', function (t) {
   t.plan(5)
 
