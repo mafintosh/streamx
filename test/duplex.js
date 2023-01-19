@@ -72,21 +72,11 @@ test('duplex: write/end callbacks', function (t) {
     }
   })
 
-  stream.write('a', function (err) {
-    t.absent(err, 'write callback')
-  })
+  stream.write('a', (err) => t.absent(err, 'write callback'))
+  stream.end('b', () => t.pass('end callback (finished)'))
 
-  stream.end('b', function () {
-    t.pass('end callback (finished)')
-  })
-
-  stream.on('data', function () {
-    t.pass('consume data') // x2
-  })
-
-  stream.on('close', function () {
-    t.pass('stream closed')
-  })
+  stream.on('data', () => t.pass('consume data')) // x2
+  stream.on('close', () => t.pass('stream closed'))
 })
 
 test('auto duplex: write/end callback', function (t) {
@@ -94,18 +84,11 @@ test('auto duplex: write/end callback', function (t) {
 
   const stream = new Duplex()
 
-  stream.on('close', function () {
-    t.pass('stream closed')
-  })
+  stream.write('a', (err) => t.absent(err, 'write callback'))
+  stream.end('b', () => t.pass('end callback (finished)'))
 
-  stream.write('a', function (err) {
-    t.absent(err, 'write callback')
-  })
-
-  stream.end('b', function () {
-    t.pass('end callback (finished)')
-    stream.destroy()
-  })
+  stream.on('finish', () => stream.destroy())
+  stream.on('close', () => t.pass('stream closed'))
 })
 
 test('duplex: end data without callback', function (t) {
@@ -124,27 +107,16 @@ test('duplex: end data without callback', function (t) {
     }
   })
 
-  stream.write('a', function (err) {
-    t.absent(err, 'write callback')
-  })
-
+  stream.write('a', (err) => t.absent(err, 'write callback'))
   stream.end('b')
 
-  stream.on('data', function () {
-    t.pass('consume data') // x2
-  })
-
-  stream.once('finish', function () {
-    t.pass('stream finished')
-  })
-
-  stream.on('close', function () {
-    t.pass('stream closed')
-  })
+  stream.on('data', () => t.pass('consume data')) // x2
+  stream.on('finish', () => t.pass('stream finished'))
+  stream.on('close', () => t.pass('stream closed'))
 })
 
 test('duplex: end callback', function (t) {
-  t.plan(3)
+  t.plan(4)
 
   const stream = new Duplex({
     write (data, cb) {
@@ -157,11 +129,8 @@ test('duplex: end callback', function (t) {
     }
   })
 
-  stream.end(function () {
-    t.pass('end callback (finished)')
-  })
+  stream.end(() => t.pass('end callback (finished)'))
 
-  stream.on('close', function () {
-    t.pass('stream closed')
-  })
+  stream.on('finish', () => t.pass('stream finished'))
+  stream.on('close', () => t.pass('stream closed'))
 })

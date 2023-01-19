@@ -180,17 +180,10 @@ test('writable: write/end callbacks', function (t) {
     }
   })
 
-  stream.write('a', function (err) {
-    t.absent(err, 'write callback')
-  })
+  stream.write('a', (err) => t.absent(err, 'write callback'))
+  stream.end('b', () => t.pass('end callback'))
 
-  stream.end('b', function () {
-    t.pass('end callback')
-  })
-
-  stream.on('close', function () {
-    t.pass('stream closed')
-  })
+  stream.on('close', () => t.pass('stream closed'))
 })
 
 test('auto writable: write/end callbacks', function (t) {
@@ -198,17 +191,10 @@ test('auto writable: write/end callbacks', function (t) {
 
   const stream = new Writable()
 
-  stream.write('a', function (err) {
-    t.absent(err, 'write callback')
-  })
+  stream.write('a', (err) => t.absent(err, 'write callback'))
+  stream.end('b', () => t.pass('end callback (finished)'))
 
-  stream.end('b', function () {
-    t.pass('end callback (finished)')
-  })
-
-  stream.on('close', function () {
-    t.pass('stream closed')
-  })
+  stream.on('close', () => t.pass('stream closed'))
 })
 
 test('writable: end data without callback', function (t) {
@@ -221,23 +207,15 @@ test('writable: end data without callback', function (t) {
     }
   })
 
-  stream.write('a', function (err) {
-    t.absent(err, 'write callback')
-  })
-
+  stream.write('a', (err) => t.absent(err, 'write callback'))
   stream.end('b')
 
-  stream.once('finish', function () {
-    t.pass('stream finished')
-  })
-
-  stream.on('close', function () {
-    t.pass('stream closed')
-  })
+  stream.on('finish', () => t.pass('stream finished'))
+  stream.on('close', () => t.pass('stream closed'))
 })
 
 test('writable: end callback', function (t) {
-  t.plan(2)
+  t.plan(3)
 
   const stream = new Writable({
     write (data, cb) {
@@ -245,11 +223,8 @@ test('writable: end callback', function (t) {
     }
   })
 
-  stream.end(function () {
-    t.pass('end callback (finished)')
-  })
+  stream.end(() => t.pass('end callback (finished)'))
 
-  stream.on('close', function () {
-    t.pass('stream closed')
-  })
+  stream.on('finish', () => t.pass('stream finished'))
+  stream.on('close', () => t.pass('stream closed'))
 })
