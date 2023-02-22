@@ -238,21 +238,50 @@ class ReadableState {
 
     if (cb) this.stream.on('error', noop) // We already error handle this so supress crashes
 
+    const onfinish = this.pipeline.finished.bind(this.pipeline)
+    const ondrain = afterDrain.bind(this)
+    let onerror
+    let onclose
+
     if (isStreamx(pipeTo)) {
       pipeTo._writableState.pipeline = this.pipeline
       if (cb) pipeTo.on('error', noop) // We already error handle this so supress crashes
-      pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline)) // TODO: just call finished from pipeTo itself
     } else {
-      const onerror = this.pipeline.done.bind(this.pipeline, pipeTo)
-      const onclose = this.pipeline.done.bind(this.pipeline, pipeTo, null) // onclose has a weird bool arg
+      onerror = this.pipeline.done.bind(this.pipeline, pipeTo)
+      onclose = this.pipeline.done.bind(this.pipeline, pipeTo, null) // onclose has a weird bool arg
       pipeTo.on('error', onerror)
       pipeTo.on('close', onclose)
-      pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline))
     }
 
-    pipeTo.on('drain', afterDrain.bind(this))
+    pipeTo.on('finish', onfinish)
+    pipeTo.on('drain', ondrain)
+
+    this.pipeline.unpipe = () => {
+      if (cb) this.stream.off('error', noop)
+
+      if (isStreamx(pipeTo)) {
+        pipeTo._writableState.pipeline = null
+        if (cb) pipeTo.off('error', noop)
+      } else {
+        pipeTo.off('error', onerror)
+        pipeTo.off('close', onclose)
+      }
+      pipeTo.off('finish', onfinish)
+    }
+
     this.stream.emit('piping', pipeTo)
     pipeTo.emit('pipe', this.stream)
+  }
+
+  unpipe (dest) {
+    const pipeTo = this.pipeTo
+    if (pipeTo === null || (dest && pipeTo !== dest)) return
+    this._duplexState &= READ_PAUSED
+    this.pipeline.unpipe()
+    this.pipeTo = null
+    this.pipeline = null
+    this.stream.emit('unpiping', pipeTo)
+    pipeTo.emit('unpipe', this.stream)
   }
 
   push (data) {
@@ -623,6 +652,11 @@ class Readable extends Stream {
     this._readableState.pipe(dest, cb)
     this._readableState.updateNextTick()
     return dest
+  }
+
+  unpipe (dest) {
+    this._readableState.unpipe(dest)
+    return this
   }
 
   read () {
