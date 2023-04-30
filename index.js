@@ -956,6 +956,98 @@ function pipeline (stream, ...streams) {
   }
 }
 
+function compose (stream, ...streams) {
+  const all = Array.isArray(stream) ? [...stream, ...streams] : [stream, ...streams]
+
+  let ondrain
+  let onfinish
+  let onclose
+  const d = new Duplex()
+  let fin = false
+  let w = all[0]
+  let r = all[all.length - 1]
+  let error
+
+  r = r.readable ? r : null
+  w = w.writable ? w : null
+
+  function onfinished (err) {
+    const cb = onclose
+    onclose = null
+
+    if (cb) {
+      cb(err)
+    } else if (err) {
+      d.destroy(err)
+    } else if (!r && !w) {
+      d.destroy()
+    }
+  }
+
+  const tail = pipeline(all, onfinished)
+
+  if (w) {
+    d._write = function (chunk, callback) {
+      if (w.write(chunk)) {
+        callback()
+      } else {
+        ondrain = callback
+      }
+    }
+
+    d._final = function (callback) {
+      w.end()
+      onfinish = callback
+    }
+
+    tail.on('drain', function () {
+      if (ondrain) {
+        const cb = ondrain
+        ondrain = null
+        cb()
+      }
+    })
+
+    tail.on('finish', () => { fin = true })
+    tail.on('error', err => { error = error || err })
+    tail.on('close', () => {
+      if (onfinish) {
+        const cb = onfinish
+        onfinish = null
+        cb(error || (fin ? null : PREMATURE_CLOSE))
+      }
+    })
+  }
+
+  if (r) {
+    tail.on('data', function (data) {
+      d.push(data)
+    })
+
+    tail.on('end', function () {
+      d.push(null)
+    })
+  }
+
+  d._destroy = function (err, callback) {
+    if (!err && onclose !== null) {
+      // TODO: Is this a premature close?
+      err = new Error()
+    }
+
+    ondrain = null
+    onfinish = null
+
+    if (onclose === null) {
+      callback(err)
+    } else {
+      onclose = callback
+    }
+  }
+
+  return d
+}
+
 function isStream (stream) {
   return !!stream._readableState || !!stream._writableState
 }
@@ -987,6 +1079,7 @@ function abort () {
 }
 
 module.exports = {
+  compose,
   pipeline,
   pipelinePromise,
   isStream,
