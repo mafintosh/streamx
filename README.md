@@ -454,10 +454,10 @@ promise if you use this version.
 ## Utilities
 
 Streamx aims to be minimal and stable. It therefore only contains a minimal set of utilities.
+To help discover of other modules that help you build streamx apps, we link some useful utilities here
 
-If you are looking for features like `stream.compose`, `pumpify`, and `duplexify` checkout [stream-composer](https://github.com/mafintosh/stream-composer).
-
-If you are looking to split a readable stream into multiple readable clones checkout [teex](https://github.com/mafintosh/teex)
+* [stream-composer](https://github.com/mafintosh/stream-composer) - Compose streams like Node's `stream.compose` and the `duplexify` and `pumpify` modules.
+* [teex](https://github.com/mafintosh/teex) - Clone a readable stream into multiple new readable instances.
 
 ## Contributing
 
