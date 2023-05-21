@@ -451,6 +451,14 @@ Same as normal pipeline except instead of returning the last stream it returns
 a promise representing the done callback. Note you should error handle this
 promise if you use this version.
 
+## Utilities
+
+Streamx aims to be minimal and stable. It therefore only contains a minimal set of utilities.
+
+If you are looking for features like `stream.compose`, `pumpify`, and `duplexify` checkout [stream-composer](https://github.com/mafintosh/stream-composer).
+
+If you are looking to split a readable stream into multiple readable clones checkout [teex](https://github.com/mafintosh/teex)
+
 ## Contributing
 
 If you want to help contribute to streamx a good way to start is to help writing more test
