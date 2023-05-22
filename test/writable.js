@@ -139,6 +139,111 @@ test('use mapWritable to map data', function (t) {
     t.pass('finished')
   })
   r.write({ foo: 1 })
+})
+
+tape('async write option', async function (t) {
+  const r = new Writable({
+    write (data) {
+      t.equals(data, 'a')
+      return new Promise(resolve => setTimeout(resolve, 30))
+    }
+  })
+  const start = Date.now()
+  r.on('close', () => {
+    t.ok((Date.now() - start) > 25)
+    t.end()
+  })
+  r.end('a')
+})
+
+tape('async writev option', async function (t) {
+  const r = new Writable({
+    highWaterMark: 2,
+    byteLength () {
+      return 1
+    },
+    writev (data) {
+      t.same(data, ['a', 'b', 'c'])
+      return new Promise(resolve => setTimeout(resolve, 30))
+    }
+  })
+  const start = Date.now()
+  r.on('close', () => {
+    t.ok((Date.now() - start) > 25)
+    t.end()
+  })
+  r.write('a')
+  r.write('b')
+  r.write('c')
+  r.end()
+})
+
+tape('async final option', async function (t) {
+  const r = new Writable({
+    final () {
+      return new Promise(resolve => setTimeout(resolve, 30))
+    }
+  })
+  const start = Date.now()
+  r.on('close', () => {
+    t.ok((Date.now() - start) > 25)
+    t.end()
+  })
+  r.end()
+})
+
+tape('error when no promise is returned by async .open template', function (t) {
+  t.plan(1)
+  const r = new Writable({
+    open () {}
+  })
+  r.on('error', error => {
+    t.ok(error instanceof Error)
+    t.end()
+  })
+  r.end()
+})
+
+tape('error when no promise is returned by async .final template', function (t) {
+  t.plan(1)
+  const r = new Writable({
+    final () {}
+  })
+  r.on('error', error => {
+    t.ok(error instanceof Error)
+    t.end()
+  })
+  r.write()
+  r.end()
+})
+
+tape('error when no promise is returned by async .write template', function (t) {
+  t.plan(2)
+  const r = new Writable({
+    write (data) {
+      t.equals(data, 'hi')
+    }
+  })
+  r.on('error', error => {
+    t.ok(error instanceof Error)
+    t.end()
+  })
+  r.write('hi')
+  r.end()
+})
+
+tape('error when no promise is returned by async .writev template', function (t) {
+  t.plan(2)
+  const r = new Writable({
+    writev (data) {
+      t.deepEquals(data, ['hi'])
+    }
+  })
+  r.on('error', error => {
+    t.ok(error instanceof Error)
+    t.end()
+  })
+  r.write('hi')
   r.end()
 })
 

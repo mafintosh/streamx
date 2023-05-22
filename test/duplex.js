@@ -5,7 +5,7 @@ test('if open does not end, it should stall', function (t) {
   t.plan(1)
 
   const d = new Duplex({
-    open () {
+    open (_cb) {
       t.pass('open called')
     },
     read () {

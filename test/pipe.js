@@ -102,7 +102,7 @@ test('simple pipe', function (t) {
       cb(null)
     },
 
-    final () {
+    async final () {
       t.pass('final called')
       t.alike(buffered, ['hello', 'world'])
     }
