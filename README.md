@@ -373,6 +373,11 @@ Boolean property indicating wheather or not this stream has been destroyed.
 
 Static method to check if a writable stream is currently under backpressure.
 
+#### `bool = await Writable.drained(ws)`
+
+Static helper to wait for a stream to drain the currently queued writes.
+Returns true if they were drained and false otherwise if the stream was destroyed.
+
 ## Duplex Stream
 
 #### `s = new stream.Duplex([options])`
