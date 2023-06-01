@@ -112,7 +112,7 @@ class WritableState {
     this.buffered = 0
     this.error = null
     this.pipeline = null
-    this.drains = null
+    this.drains = null // if we add more seldomly used helpers we might them into a subobject so its a single ptr
     this.byteLength = byteLengthWritable || byteLength || defaultByteLength
     this.map = mapWritable || map
     this.afterWrite = afterWrite.bind(this)
