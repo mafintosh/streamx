@@ -454,10 +454,12 @@ function afterDestroy (err) {
   const rs = stream._readableState
   const ws = stream._writableState
 
-  while (ws !== null && ws.drains !== null && ws.drains.length > 0) ws.drains.shift().resolve(false)
-
   if (rs !== null && rs.pipeline !== null) rs.pipeline.done(stream, err)
-  if (ws !== null && ws.pipeline !== null) ws.pipeline.done(stream, err)
+
+  if (ws !== null) {
+    while (ws.drains !== null && ws.drains.length > 0) ws.drains.shift().resolve(false)
+    if (ws.pipeline !== null) ws.pipeline.done(stream, err)
+  }
 }
 
 function afterWrite (err) {

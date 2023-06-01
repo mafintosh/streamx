@@ -170,7 +170,6 @@ test('many ends', function (t) {
   })
 })
 
-
 test('drained helper', async function (t) {
   const w = new Writable({
     write (data, cb) {
