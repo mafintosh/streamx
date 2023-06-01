@@ -112,6 +112,7 @@ class WritableState {
     this.buffered = 0
     this.error = null
     this.pipeline = null
+    this.drains = null
     this.byteLength = byteLengthWritable || byteLength || defaultByteLength
     this.map = mapWritable || map
     this.afterWrite = afterWrite.bind(this)
@@ -453,6 +454,8 @@ function afterDestroy (err) {
   const rs = stream._readableState
   const ws = stream._writableState
 
+  while (ws !== null && ws.drains !== null && ws.drains.length > 0) ws.drains.shift().resolve(false)
+
   if (rs !== null && rs.pipeline !== null) rs.pipeline.done(stream, err)
   if (ws !== null && ws.pipeline !== null) ws.pipeline.done(stream, err)
 }
@@ -462,6 +465,8 @@ function afterWrite (err) {
 
   if (err) stream.destroy(err)
   stream._duplexState &= WRITE_NOT_ACTIVE
+
+  if (this.drains !== null) tickDrains(this.drains)
 
   if ((stream._duplexState & WRITE_DRAIN_STATUS) === WRITE_UNDRAINED) {
     stream._duplexState &= WRITE_DRAINED
@@ -487,6 +492,15 @@ function updateReadNT () {
 function updateWriteNT () {
   this.stream._duplexState &= WRITE_NOT_NEXT_TICK
   this.update()
+}
+
+function tickDrains (drains) {
+  for (let i = 0; i < drains.length; i++) {
+    if (--drains[i].writes === 0) {
+      drains.shift().resolve(true)
+      i--
+    }
+  }
 }
 
 function afterOpen (err) {
@@ -599,6 +613,17 @@ class Stream extends EventEmitter {
     }
 
     return super.on(name, fn)
+  }
+
+  static drained (stream) {
+    if (stream.destroyed) return Promise.resolve(false)
+    const ws = stream._writableState
+    const writes = ws.queue.length
+    if (writes === 0) return Promise.resolve(true)
+    if (ws.drains === null) ws.drains = []
+    return new Promise((resolve) => {
+      ws.drains.push({ writes, resolve })
+    })
   }
 }
 
