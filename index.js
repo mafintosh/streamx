@@ -498,6 +498,7 @@ function updateWriteNT () {
 
 function tickDrains (drains) {
   for (let i = 0; i < drains.length; i++) {
+    // drains.writes are monotonic, so if one is 0 its always the first one
     if (--drains[i].writes === 0) {
       drains.shift().resolve(true)
       i--
