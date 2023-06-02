@@ -214,3 +214,26 @@ test('drained helper', async function (t) {
   t.absent(await d3)
   t.absent(await Writable.drained(w), 'already destroyed')
 })
+
+test('drained helper, inflight write', async function (t) {
+  let writing = false
+  const w = new Writable({
+    write (data, cb) {
+      writing = true
+      setImmediate(() => {
+        setImmediate(() => {
+          writing = false
+          cb()
+        })
+      })
+    }
+  })
+
+  w.write('hello')
+  w.end()
+
+  await new Promise(resolve => setImmediate(resolve))
+  t.ok(writing, 'is writing')
+  await Writable.drained(w)
+  t.absent(writing, 'not writing')
+})
