@@ -7,8 +7,8 @@ const FIFO = require('fast-fifo')
 
 /* eslint-disable no-multi-spaces */
 
-// 26 bits used total (4 from shared, 13 from read, and 9 from write)
-const MAX = ((1 << 26) - 1)
+// 26 bits used total (4 from shared, 13 from read, and 10 from write)
+const MAX = ((1 << 27) - 1)
 
 // Shared state
 const OPENING       = 0b0001
@@ -53,17 +53,18 @@ const READ_PIPE_NOT_DRAINED       = MAX ^ READ_FLOWING
 const READ_NOT_NEXT_TICK          = MAX ^ READ_NEXT_TICK
 
 // Write state (17 bit offset, 4 bit offset from shared state and 13 from read state)
-const WRITE_ACTIVE     = 0b000000001 << 17
-const WRITE_PRIMARY    = 0b000000010 << 17
-const WRITE_SYNC       = 0b000000100 << 17
-const WRITE_QUEUED     = 0b000001000 << 17
-const WRITE_UNDRAINED  = 0b000010000 << 17
-const WRITE_DONE       = 0b000100000 << 17
-const WRITE_EMIT_DRAIN = 0b001000000 << 17
-const WRITE_NEXT_TICK  = 0b010000001 << 17 // also active
-const WRITE_FINISHING  = 0b100000000 << 17
+const WRITE_ACTIVE     = 0b0000000001 << 17
+const WRITE_PRIMARY    = 0b0000000010 << 17
+const WRITE_SYNC       = 0b0000000100 << 17
+const WRITE_QUEUED     = 0b0000001000 << 17
+const WRITE_UNDRAINED  = 0b0000010000 << 17
+const WRITE_DONE       = 0b0000100000 << 17
+const WRITE_EMIT_DRAIN = 0b0001000000 << 17
+const WRITE_NEXT_TICK  = 0b0010000001 << 17 // also active
+const WRITE_FINISHING  = 0b0100000000 << 17
+const WRITE_WRITING    = 0b1000000000 << 17
 
-const WRITE_NOT_ACTIVE    = MAX ^ WRITE_ACTIVE
+const WRITE_NOT_ACTIVE    = MAX ^ (WRITE_ACTIVE | WRITE_WRITING)
 const WRITE_NOT_SYNC      = MAX ^ WRITE_SYNC
 const WRITE_NON_PRIMARY   = MAX ^ WRITE_PRIMARY
 const WRITE_NOT_FINISHING = MAX ^ WRITE_FINISHING
@@ -98,7 +99,7 @@ const WRITE_QUEUED_AND_ACTIVE = WRITE_QUEUED | WRITE_ACTIVE
 const WRITE_DRAIN_STATUS = WRITE_QUEUED | WRITE_UNDRAINED | OPEN_STATUS | WRITE_ACTIVE
 const WRITE_STATUS = OPEN_STATUS | WRITE_ACTIVE | WRITE_QUEUED
 const WRITE_PRIMARY_AND_ACTIVE = WRITE_PRIMARY | WRITE_ACTIVE
-const WRITE_ACTIVE_AND_SYNC = WRITE_ACTIVE | WRITE_SYNC
+const WRITE_ACTIVE_AND_SYNC = WRITE_ACTIVE | WRITE_SYNC | WRITE_WRITING
 const WRITE_FINISHING_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_QUEUED_AND_ACTIVE | WRITE_DONE
 const WRITE_BACKPRESSURE_STATUS = WRITE_UNDRAINED | DESTROY_STATUS | WRITE_FINISHING | WRITE_DONE
 
@@ -621,7 +622,7 @@ class Stream extends EventEmitter {
   static drained (stream) {
     if (stream.destroyed) return Promise.resolve(false)
     const ws = stream._writableState
-    const writes = ws.queue.length
+    const writes = ws.queue.length + ((stream._duplexState & WRITE_WRITING) ? 1 : 0)
     if (writes === 0) return Promise.resolve(true)
     if (ws.drains === null) ws.drains = []
     return new Promise((resolve) => {
