@@ -929,9 +929,20 @@ function pipeline (stream, ...streams) {
   if (done) {
     let fin = false
 
-    dest.on('finish', () => { fin = true })
-    dest.on('error', err => { error = error || err })
-    dest.on('close', () => done(error || (fin ? null : PREMATURE_CLOSE)))
+    const autoDestroy = isStreamx(dest) || !!(dest._writableState && dest._writableState.autoDestroy)
+
+    dest.on('error', (err) => {
+      if (error === null) error = err
+    })
+
+    dest.on('finish', () => {
+      fin = true
+      if (!autoDestroy) done(error)
+    })
+
+    if (autoDestroy) {
+      dest.on('close', () => done(error || (fin ? null : PREMATURE_CLOSE)))
+    }
   }
 
   return dest
