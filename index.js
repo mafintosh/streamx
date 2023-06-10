@@ -618,17 +618,6 @@ class Stream extends EventEmitter {
 
     return super.on(name, fn)
   }
-
-  static drained (stream) {
-    if (stream.destroyed) return Promise.resolve(false)
-    const ws = stream._writableState
-    const writes = ws.queue.length + ((stream._duplexState & WRITE_WRITING) ? 1 : 0)
-    if (writes === 0) return Promise.resolve(true)
-    if (ws.drains === null) ws.drains = []
-    return new Promise((resolve) => {
-      ws.drains.push({ writes, resolve })
-    })
-  }
 }
 
 class Readable extends Stream {
@@ -817,6 +806,17 @@ class Writable extends Stream {
 
   static isBackpressured (ws) {
     return (ws._duplexState & WRITE_BACKPRESSURE_STATUS) !== 0
+  }
+
+  static drained (ws) {
+    if (ws.destroyed) return Promise.resolve(false)
+    const state = ws._writableState
+    const writes = state.queue.length + ((ws._duplexState & WRITE_WRITING) ? 1 : 0)
+    if (writes === 0) return Promise.resolve(true)
+    if (state.drains === null) state.drains = []
+    return new Promise((resolve) => {
+      state.drains.push({ writes, resolve })
+    })
   }
 
   write (data) {
