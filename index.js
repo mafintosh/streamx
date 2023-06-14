@@ -629,7 +629,7 @@ class Readable extends Stream {
 
     if (opts) {
       if (opts.read) this._read = opts.read
-      if (opts.eagerOpen) this.resume().pause()
+      if (opts.eagerOpen) this._readableState.updateNextTick()
     }
   }
 
@@ -789,6 +789,7 @@ class Writable extends Stream {
       if (opts.writev) this._writev = opts.writev
       if (opts.write) this._write = opts.write
       if (opts.final) this._final = opts.final
+      if (opts.eagerOpen) this._writableState.updateNextTick()
     }
   }
 
