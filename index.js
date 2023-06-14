@@ -1005,7 +1005,8 @@ function isStreamx (stream) {
 }
 
 function getStreamError (stream) {
-  return (stream._readableState && stream._readableState.error) || (stream._writableState && stream._writableState.error)
+  const err = (stream._readableState && stream._readableState.error) || (stream._writableState && stream._writableState.error)
+  return err === STREAM_DESTROYED ? null : err // only explicit errors
 }
 
 function isReadStreamx (stream) {
