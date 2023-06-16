@@ -94,6 +94,7 @@ const READ_UPDATE_SYNC_STATUS = READ_UPDATING | OPEN_STATUS | READ_NEXT_TICK | R
 
 // Combined write state
 const WRITE_PRIMARY_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_DONE
+const WRITE_QUEUED_AND_UNDRAINED = WRITE_QUEUED | WRITE_UNDRAINED
 const WRITE_QUEUED_AND_ACTIVE = WRITE_QUEUED | WRITE_ACTIVE
 const WRITE_DRAIN_STATUS = WRITE_QUEUED | WRITE_UNDRAINED | OPEN_STATUS | WRITE_ACTIVE
 const WRITE_STATUS = OPEN_STATUS | WRITE_ACTIVE | WRITE_QUEUED
@@ -129,12 +130,14 @@ class WritableState {
 
     this.buffered += this.byteLength(data)
     this.queue.push(data)
-    this.stream._duplexState |= WRITE_QUEUED
 
-    if (this.buffered < this.highWaterMark) return true
-    this.stream._duplexState |= WRITE_UNDRAINED
-    return false
-  }
+    if (this.buffered < this.highWaterMark) {
+       this.stream._duplexState |= WRITE_QUEUED
+       return true
+     }
+
+     this.stream._duplexState |= WRITE_QUEUED_AND_UNDRAINED
+     return false  }
 
   shift () {
     const data = this.queue.shift()
