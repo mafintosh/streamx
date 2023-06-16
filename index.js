@@ -51,7 +51,7 @@ const READ_PIPE_NOT_DRAINED       = MAX ^ READ_FLOWING
 const READ_NOT_NEXT_TICK          = MAX ^ READ_NEXT_TICK
 const READ_NOT_UPDATING           = MAX ^ READ_UPDATING
 
-// Write state (18 bit offset, 4 bit offset from shared state and 14 from read state)
+// Write state (17 bit offset, 4 bit offset from shared state and 13 from read state)
 const WRITE_ACTIVE     = 0b0000000001 << 17
 const WRITE_UPDATING   = 0b0000000010 << 17
 const WRITE_PRIMARY    = 0b0000000100 << 17
@@ -90,11 +90,10 @@ const READ_ENDING_STATUS = OPEN_STATUS | READ_ENDING | READ_QUEUED
 const READ_READABLE_STATUS = OPEN_STATUS | READ_EMIT_READABLE | READ_QUEUED | READ_EMITTED_READABLE
 const SHOULD_NOT_READ = OPEN_STATUS | READ_ACTIVE | READ_ENDING | READ_DONE | READ_NEEDS_PUSH
 const READ_BACKPRESSURE_STATUS = DESTROY_STATUS | READ_ENDING | READ_DONE
-const READ_UPDATE_SYNC_STATUS = READ_UPDATING | OPEN_STATUS | READ_NEXT_TICK | READ_NON_PRIMARY
+const READ_UPDATE_SYNC_STATUS = READ_UPDATING | OPEN_STATUS | READ_NEXT_TICK | READ_PRIMARY
 
 // Combined write state
 const WRITE_PRIMARY_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_DONE
-const WRITE_QUEUED_AND_UNDRAINED = WRITE_QUEUED | WRITE_UNDRAINED
 const WRITE_QUEUED_AND_ACTIVE = WRITE_QUEUED | WRITE_ACTIVE
 const WRITE_DRAIN_STATUS = WRITE_QUEUED | WRITE_UNDRAINED | OPEN_STATUS | WRITE_ACTIVE
 const WRITE_STATUS = OPEN_STATUS | WRITE_ACTIVE | WRITE_QUEUED
@@ -102,7 +101,7 @@ const WRITE_PRIMARY_AND_ACTIVE = WRITE_PRIMARY | WRITE_ACTIVE
 const WRITE_ACTIVE_AND_WRITING = WRITE_ACTIVE | WRITE_WRITING
 const WRITE_FINISHING_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_QUEUED_AND_ACTIVE | WRITE_DONE
 const WRITE_BACKPRESSURE_STATUS = WRITE_UNDRAINED | DESTROY_STATUS | WRITE_FINISHING | WRITE_DONE
-const WRITE_UPDATE_SYNC_STATUS = WRITE_UPDATING | OPEN_STATUS | WRITE_NEXT_TICK | WRITE_NON_PRIMARY
+const WRITE_UPDATE_SYNC_STATUS = WRITE_UPDATING | OPEN_STATUS | WRITE_NEXT_TICK | WRITE_PRIMARY
 
 const asyncIterator = Symbol.asyncIterator || Symbol('asyncIterator')
 
@@ -130,32 +129,31 @@ class WritableState {
 
     this.buffered += this.byteLength(data)
     this.queue.push(data)
-    this.updateSoon()
+    this.stream._duplexState |= WRITE_QUEUED
 
-    if (this.buffered < this.highWaterMark) {
-      this.stream._duplexState |= WRITE_QUEUED
-      return true
-    }
+    this.updateNextTick()
 
-    this.stream._duplexState |= WRITE_QUEUED_AND_UNDRAINED
+    if (this.buffered < this.highWaterMark) return true
+    this.stream._duplexState |= WRITE_UNDRAINED
     return false
   }
 
   shift () {
     const data = this.queue.shift()
-    const stream = this.stream
 
     this.buffered -= this.byteLength(data)
-    if (this.buffered === 0) stream._duplexState &= WRITE_NOT_QUEUED
+    if (this.buffered === 0) this.stream._duplexState &= WRITE_NOT_QUEUED
 
     return data
   }
 
   end (data) {
+    this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
+
     if (typeof data === 'function') this.stream.once('finish', data)
     else if (data !== undefined && data !== null) this.push(data)
-    this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
-    this.updateSoon()
+
+    this.updateNextTick()
   }
 
   autoBatch (data, cb) {
@@ -219,7 +217,7 @@ class WritableState {
   }
 
   updateSoon () {
-    if ((this.stream._duplexState & WRITE_UPDATE_SYNC_STATUS) === 0) this.update()
+    if ((this.stream._duplexState & WRITE_UPDATE_SYNC_STATUS) === WRITE_PRIMARY) this.update()
     else this.updateNextTick()
   }
 
@@ -275,7 +273,7 @@ class ReadableState {
     this.stream.emit('piping', pipeTo)
     pipeTo.emit('pipe', this.stream)
 
-    this.updateSoon()
+    this.updateNextTick()
   }
 
   push (data) {
@@ -285,7 +283,7 @@ class ReadableState {
       this.highWaterMark = 0
 
       stream._duplexState = (stream._duplexState | READ_ENDING) & READ_NON_PRIMARY_AND_PUSHED
-      this.updateSoon()
+      this.updateNextTick()
 
       return false
     }
@@ -295,7 +293,7 @@ class ReadableState {
     this.queue.push(data)
 
     stream._duplexState = (stream._duplexState | READ_QUEUED) & READ_PUSHED
-    this.updateSoon()
+    this.updateNextTick()
 
     return this.buffered < this.highWaterMark
   }
@@ -401,7 +399,7 @@ class ReadableState {
   }
 
   updateSoon () {
-    if ((this.stream._readableState & READ_UPDATE_SYNC_STATUS) === 0) this.update()
+    if ((this.stream._readableState & READ_UPDATE_SYNC_STATUS) === READ_PRIMARY) this.update()
     else this.updateNextTick()
   }
 
