@@ -132,12 +132,13 @@ class WritableState {
     this.queue.push(data)
 
     if (this.buffered < this.highWaterMark) {
-       this.stream._duplexState |= WRITE_QUEUED
-       return true
-     }
+      this.stream._duplexState |= WRITE_QUEUED
+      return true
+    }
 
-     this.stream._duplexState |= WRITE_QUEUED_AND_UNDRAINED
-     return false  }
+    this.stream._duplexState |= WRITE_QUEUED_AND_UNDRAINED
+    return false
+  }
 
   shift () {
     const data = this.queue.shift()
