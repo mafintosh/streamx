@@ -230,3 +230,79 @@ test('use mapReadable to map data', async function (t) {
     break
   }
 })
+
+test('live stream', function (t) {
+  t.plan(3)
+
+  const r = new Readable({
+    read (cb) {
+      this.push('data')
+      this.push('data')
+      this.push('data')
+      // assume cb is called way later
+    }
+  })
+
+  r.on('data', function (data) {
+    t.is(data, 'data')
+  })
+})
+
+test('live stream with readable', function (t) {
+  t.plan(3)
+
+  const r = new Readable({
+    read (cb) {
+      this.push('data')
+      this.push('data')
+      this.push('data')
+      // assume cb is called way later
+    }
+  })
+
+  r.on('readable', function () {
+    let data
+    while ((data = r.read()) !== null) t.is(data, 'data')
+  })
+})
+
+test('resume a stalled stream', function (t) {
+  t.plan(1)
+
+  const expected = []
+  let once = true
+
+  const r = new Readable({
+    read (cb) {
+      if (once) {
+        once = false
+        this.push('data')
+        expected.push('data')
+        return cb()
+      }
+
+      for (let i = 0; i < 20; i++) {
+        this.push('data')
+        expected.push('data')
+      }
+
+      // pretend its stalled
+    }
+  })
+
+  const collected = []
+
+  r.once('data', function (data) {
+    r.pause()
+    collected.push(data)
+    setImmediate(() => {
+      r.on('data', function (data) {
+        collected.push(data)
+        if (collected.length === 21) {
+          t.alike(collected, expected)
+        }
+      })
+      r.resume()
+    })
+  })
+})
