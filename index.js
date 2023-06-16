@@ -135,7 +135,7 @@ class WritableState {
 
     this.buffered += this.byteLength(data)
     this.queue.push(data)
-    this.updateASAP()
+    this.updateSoon()
 
     if (this.buffered < this.highWaterMark) {
       this.stream._duplexState |= WRITE_QUEUED
@@ -160,7 +160,7 @@ class WritableState {
     if (typeof data === 'function') this.stream.once('finish', data)
     else if (data !== undefined && data !== null) this.push(data)
     this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
-    this.updateASAP()
+    this.updateSoon()
   }
 
   autoBatch (data, cb) {
@@ -176,24 +176,21 @@ class WritableState {
     stream._writev(buffer, cb)
   }
 
-  updateASAP () {
-    if ((this.stream._duplexState & WRITE_UPDATE_SYNC_STATUS) === 0) this.update()
-    else this.updateNextTick()
-  }
-
   update () {
     const stream = this.stream
 
     stream._duplexState |= WRITE_UPDATING
 
-    while ((stream._duplexState & WRITE_STATUS) === WRITE_QUEUED) {
-      const data = this.shift()
-      stream._duplexState |= WRITE_ACTIVE_AND_SYNC
-      stream._write(data, this.afterWrite)
-      stream._duplexState &= WRITE_NOT_SYNC
-    }
+    do {
+      while ((stream._duplexState & WRITE_STATUS) === WRITE_QUEUED) {
+        const data = this.shift()
+        stream._duplexState |= WRITE_ACTIVE_AND_SYNC
+        stream._write(data, this.afterWrite)
+        stream._duplexState &= WRITE_NOT_SYNC
+      }
 
-    if ((stream._duplexState & WRITE_PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
+      if ((stream._duplexState & WRITE_PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
+    } while (this.continueUpdate() === true)
 
     stream._duplexState &= WRITE_NOT_UPDATING
   }
@@ -221,10 +218,21 @@ class WritableState {
     }
   }
 
+  continueUpdate () {
+    if ((this.stream._duplexState & WRITE_NEXT_TICK) === 0) return false
+    this.stream._duplexState &= WRITE_NOT_NEXT_TICK
+    return true
+  }
+
+  updateSoon () {
+    if ((this.stream._duplexState & WRITE_UPDATE_SYNC_STATUS) === 0) this.update()
+    else this.updateNextTick()
+  }
+
   updateNextTick () {
     if ((this.stream._duplexState & WRITE_NEXT_TICK) !== 0) return
     this.stream._duplexState |= WRITE_NEXT_TICK
-    queueTick(this.afterUpdateNextTick)
+    if ((this.stream._duplexState & WRITE_UPDATING) === 0) queueTick(this.afterUpdateNextTick)
   }
 }
 
@@ -273,7 +281,7 @@ class ReadableState {
     this.stream.emit('piping', pipeTo)
     pipeTo.emit('pipe', this.stream)
 
-    this.updateASAP()
+    this.updateSoon()
   }
 
   push (data) {
@@ -283,7 +291,7 @@ class ReadableState {
       this.highWaterMark = 0
 
       stream._duplexState = (stream._duplexState | READ_ENDING) & READ_NON_PRIMARY_AND_PUSHED
-      this.updateASAP()
+      this.updateSoon()
 
       return false
     }
@@ -293,7 +301,7 @@ class ReadableState {
     this.queue.push(data)
 
     stream._duplexState = (stream._duplexState | READ_QUEUED) & READ_PUSHED
-    this.updateASAP()
+    this.updateSoon()
 
     return this.buffered < this.highWaterMark
   }
@@ -343,31 +351,28 @@ class ReadableState {
     }
   }
 
-  updateASAP () {
-    if ((this.stream._readableState & READ_UPDATE_SYNC_STATUS) === 0) this.update()
-    else this.updateNextTick()
-  }
-
   update () {
     const stream = this.stream
 
     stream._duplexState |= READ_UPDATING
 
-    this.drain()
+    do {
+      this.drain()
 
-    while (this.buffered < this.highWaterMark && (stream._duplexState & SHOULD_NOT_READ) === 0) {
-      stream._duplexState |= READ_ACTIVE_AND_SYNC_AND_NEEDS_PUSH
-      stream._read(this.afterRead)
-      stream._duplexState &= READ_NOT_SYNC
-      if ((stream._duplexState & READ_ACTIVE) === 0) this.drain()
-    }
+      while (this.buffered < this.highWaterMark && (stream._duplexState & SHOULD_NOT_READ) === 0) {
+        stream._duplexState |= READ_ACTIVE_AND_SYNC_AND_NEEDS_PUSH
+        stream._read(this.afterRead)
+        stream._duplexState &= READ_NOT_SYNC
+        if ((stream._duplexState & READ_ACTIVE) === 0) this.drain()
+      }
 
-    if ((stream._duplexState & READ_READABLE_STATUS) === READ_EMIT_READABLE_AND_QUEUED) {
-      stream._duplexState |= READ_EMITTED_READABLE
-      stream.emit('readable')
-    }
+      if ((stream._duplexState & READ_READABLE_STATUS) === READ_EMIT_READABLE_AND_QUEUED) {
+        stream._duplexState |= READ_EMITTED_READABLE
+        stream.emit('readable')
+      }
 
-    if ((stream._duplexState & READ_PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
+      if ((stream._duplexState & READ_PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
+    } while (this.continueUpdate() === true)
 
     stream._duplexState &= READ_NOT_UPDATING
   }
@@ -396,10 +401,21 @@ class ReadableState {
     }
   }
 
+  continueUpdate () {
+    if ((this.stream._duplexState & READ_NEXT_TICK) === 0) return false
+    this.stream._duplexState &= READ_NOT_NEXT_TICK
+    return true
+  }
+
+  updateSoon () {
+    if ((this.stream._readableState & READ_UPDATE_SYNC_STATUS) === 0) this.update()
+    else this.updateNextTick()
+  }
+
   updateNextTick () {
     if ((this.stream._duplexState & READ_NEXT_TICK) !== 0) return
     this.stream._duplexState |= READ_NEXT_TICK
-    queueTick(this.afterUpdateNextTick)
+    if ((this.stream._duplexState & READ_UPDATING) === 0) queueTick(this.afterUpdateNextTick)
   }
 }
 
@@ -456,7 +472,7 @@ class Pipeline {
 
 function afterDrain () {
   this.stream._duplexState |= READ_PIPE_DRAINED
-  if ((this.stream._duplexState & READ_ACTIVE_AND_SYNC) === 0) this.updateASAP()
+  if ((this.stream._duplexState & READ_ACTIVE_AND_SYNC) === 0) this.updateSoon()
   else this.drain()
 }
 
@@ -472,7 +488,10 @@ function afterFinal (err) {
   }
 
   stream._duplexState &= WRITE_NOT_ACTIVE
-  this.update()
+
+  // no need to wait the extra tick here, so we short circuit that
+  if ((stream._duplexState & WRITE_UPDATING) === 0) this.update()
+  else this.updateNextTick()
 }
 
 function afterDestroy (err) {
@@ -509,23 +528,27 @@ function afterWrite (err) {
     }
   }
 
-  if ((stream._duplexState & WRITE_SYNC) === 0) this.update()
+  this.updateSoon()
 }
 
 function afterRead (err) {
   if (err) this.stream.destroy(err)
   this.stream._duplexState &= READ_NOT_ACTIVE
-  if ((this.stream._duplexState & READ_SYNC) === 0) this.update()
+  this.updateSoon()
 }
 
 function updateReadNT () {
-  this.stream._duplexState &= READ_NOT_NEXT_TICK
-  if ((this.stream._duplexState & READ_UPDATING) === 0) this.update()
+  if ((this.stream._duplexState & READ_UPDATING) === 0) {
+    this.stream._duplexState &= READ_NOT_NEXT_TICK
+    this.update()
+  }
 }
 
 function updateWriteNT () {
-  this.stream._duplexState &= WRITE_NOT_NEXT_TICK
-  if ((this.stream._duplexState & WRITE_UPDATING) === 0) this.update()
+  if ((this.stream._duplexState & WRITE_UPDATING) === 0) {
+    this.stream._duplexState &= WRITE_NOT_NEXT_TICK
+    this.update()
+  }
 }
 
 function tickDrains (drains) {
@@ -552,11 +575,11 @@ function afterOpen (err) {
   stream._duplexState &= NOT_ACTIVE
 
   if (stream._writableState !== null) {
-    stream._writableState.update()
+    stream._writableState.updateSoon()
   }
 
   if (stream._readableState !== null) {
-    stream._readableState.update()
+    stream._readableState.updateSoon()
   }
 }
 
