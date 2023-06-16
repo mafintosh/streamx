@@ -7,8 +7,8 @@ const FIFO = require('fast-fifo')
 
 /* eslint-disable no-multi-spaces */
 
-// 26 bits used total (4 from shared, 13 from read, and 10 from write)
-const MAX = ((1 << 27) - 1)
+// 28 bits used total (4 from shared, 14 from read, and 10 from write)
+const MAX = ((1 << 28) - 1)
 
 // Shared state
 const OPENING       = 0b0001
@@ -20,19 +20,20 @@ const NOT_OPENING = MAX ^ OPENING
 const NOT_PREDESTROYING = MAX ^ PREDESTROYING
 
 // Read state (4 bit offset from shared state)
-const READ_ACTIVE           = 0b0000000000001 << 4
-const READ_PRIMARY          = 0b0000000000010 << 4
-const READ_SYNC             = 0b0000000000100 << 4
-const READ_QUEUED           = 0b0000000001000 << 4
-const READ_RESUMED          = 0b0000000010000 << 4
-const READ_PIPE_DRAINED     = 0b0000000100000 << 4
-const READ_ENDING           = 0b0000001000000 << 4
-const READ_EMIT_DATA        = 0b0000010000000 << 4
-const READ_EMIT_READABLE    = 0b0000100000000 << 4
-const READ_EMITTED_READABLE = 0b0001000000000 << 4
-const READ_DONE             = 0b0010000000000 << 4
-const READ_NEXT_TICK        = 0b0100000000001 << 4 // also active
-const READ_NEEDS_PUSH       = 0b1000000000000 << 4
+const READ_ACTIVE           = 0b00000000000001 << 4
+const READ_UPDATING         = 0b00000000000010 << 4
+const READ_PRIMARY          = 0b00000000000100 << 4
+const READ_SYNC             = 0b00000000001000 << 4
+const READ_QUEUED           = 0b00000000010000 << 4
+const READ_RESUMED          = 0b00000000100000 << 4
+const READ_PIPE_DRAINED     = 0b00000001000000 << 4
+const READ_ENDING           = 0b00000010000000 << 4
+const READ_EMIT_DATA        = 0b00000100000000 << 4
+const READ_EMIT_READABLE    = 0b00001000000000 << 4
+const READ_EMITTED_READABLE = 0b00010000000000 << 4
+const READ_DONE             = 0b00100000000000 << 4
+const READ_NEXT_TICK        = 0b01000000000001 << 4 // also active
+const READ_NEEDS_PUSH       = 0b10000000000000 << 4
 
 // Combined read state
 const READ_FLOWING = READ_RESUMED | READ_PIPE_DRAINED
@@ -51,18 +52,19 @@ const READ_NOT_QUEUED             = MAX ^ (READ_QUEUED | READ_EMITTED_READABLE)
 const READ_NOT_ENDING             = MAX ^ READ_ENDING
 const READ_PIPE_NOT_DRAINED       = MAX ^ READ_FLOWING
 const READ_NOT_NEXT_TICK          = MAX ^ READ_NEXT_TICK
+const READ_NOT_UPDATING           = MAX ^ READ_UPDATING
 
-// Write state (17 bit offset, 4 bit offset from shared state and 13 from read state)
-const WRITE_ACTIVE     = 0b0000000001 << 17
-const WRITE_PRIMARY    = 0b0000000010 << 17
-const WRITE_SYNC       = 0b0000000100 << 17
-const WRITE_QUEUED     = 0b0000001000 << 17
-const WRITE_UNDRAINED  = 0b0000010000 << 17
-const WRITE_DONE       = 0b0000100000 << 17
-const WRITE_EMIT_DRAIN = 0b0001000000 << 17
-const WRITE_NEXT_TICK  = 0b0010000001 << 17 // also active
-const WRITE_FINISHING  = 0b0100000000 << 17
-const WRITE_WRITING    = 0b1000000000 << 17
+// Write state (18 bit offset, 4 bit offset from shared state and 14 from read state)
+const WRITE_ACTIVE     = 0b0000000001 << 18
+const WRITE_PRIMARY    = 0b0000000010 << 18
+const WRITE_SYNC       = 0b0000000100 << 18
+const WRITE_QUEUED     = 0b0000001000 << 18
+const WRITE_UNDRAINED  = 0b0000010000 << 18
+const WRITE_DONE       = 0b0000100000 << 18
+const WRITE_EMIT_DRAIN = 0b0001000000 << 18
+const WRITE_NEXT_TICK  = 0b0010000001 << 18 // also active
+const WRITE_FINISHING  = 0b0100000000 << 18
+const WRITE_WRITING    = 0b1000000000 << 18
 
 const WRITE_NOT_ACTIVE    = MAX ^ (WRITE_ACTIVE | WRITE_WRITING)
 const WRITE_NOT_SYNC      = MAX ^ WRITE_SYNC
@@ -91,6 +93,7 @@ const READ_ENDING_STATUS = OPEN_STATUS | READ_ENDING | READ_QUEUED
 const READ_READABLE_STATUS = OPEN_STATUS | READ_EMIT_READABLE | READ_QUEUED | READ_EMITTED_READABLE
 const SHOULD_NOT_READ = OPEN_STATUS | READ_ACTIVE | READ_ENDING | READ_DONE | READ_NEEDS_PUSH
 const READ_BACKPRESSURE_STATUS = DESTROY_STATUS | READ_ENDING | READ_DONE
+const READ_UPDATE_STATUS = READ_UPDATING | OPEN_STATUS
 
 // Combined write state
 const WRITE_PRIMARY_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_DONE
@@ -272,6 +275,10 @@ class ReadableState {
 
     stream._duplexState = (stream._duplexState | READ_QUEUED) & READ_PUSHED
 
+    // avoids a deadlock for live streams and drain right now in case this is called from read
+    // incase this triggers a re-entry - ie ondata -> destroy, it should be fine as the active bit is set
+    this.updateMaybe()
+
     return this.buffered < this.highWaterMark
   }
 
@@ -321,10 +328,14 @@ class ReadableState {
     }
   }
 
+  updateMaybe () {
+    if ((this.stream._readableState & READ_UPDATE_STATUS) === 0) this.update()
+  }
+
   update () {
     const stream = this.stream
 
-    this.drain()
+    stream._duplexState |= READ_UPDATING
 
     while (this.buffered < this.highWaterMark && (stream._duplexState & SHOULD_NOT_READ) === 0) {
       stream._duplexState |= READ_ACTIVE_AND_SYNC_AND_NEEDS_PUSH
@@ -338,7 +349,11 @@ class ReadableState {
       stream.emit('readable')
     }
 
+    this.drain()
+
     if ((stream._duplexState & READ_PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
+
+    stream._duplexState &= READ_NOT_UPDATING
   }
 
   updateNonPrimary () {
@@ -585,8 +600,14 @@ class Stream extends EventEmitter {
       if (!err) err = STREAM_DESTROYED
       this._duplexState = (this._duplexState | DESTROYING) & NON_PRIMARY
 
-      if (this._readableState !== null) this._readableState.error = err
-      if (this._writableState !== null) this._writableState.error = err
+      if (this._readableState !== null) {
+        this._readableState.highWaterMark = 0
+        this._readableState.error = err
+      }
+      if (this._writableState !== null) {
+        this._writableState.highWaterMark = 0
+        this._writableState.error = err
+      }
 
       this._duplexState |= PREDESTROYING
       this._predestroy()

@@ -95,7 +95,7 @@ test('eager open', async function (t) {
 })
 
 test('shorthands', function (t) {
-  t.plan(3 + 1)
+  t.plan(3)
 
   const r = new Readable({
     read (cb) {
@@ -109,7 +109,6 @@ test('shorthands', function (t) {
   })
 
   r.once('readable', function () {
-    t.is(r.read(), 'hello')
     t.is(r.read(), 'hello')
     r.destroy()
     t.is(r.read(), null)
@@ -304,5 +303,12 @@ test('resume a stalled stream', function (t) {
       })
       r.resume()
     })
+=======
+    t.pass('readable')
+  })
+
+  r.on('data', function (data) {
+    t.is(data, 'data')
+>>>>>>> 7f959f1 (allow sync data emits)
   })
 })
