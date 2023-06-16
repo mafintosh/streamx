@@ -131,8 +131,6 @@ class WritableState {
     this.queue.push(data)
     this.stream._duplexState |= WRITE_QUEUED
 
-    this.updateNextTick()
-
     if (this.buffered < this.highWaterMark) return true
     this.stream._duplexState |= WRITE_UNDRAINED
     return false
@@ -148,12 +146,9 @@ class WritableState {
   }
 
   end (data) {
-    this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
-
     if (typeof data === 'function') this.stream.once('finish', data)
     else if (data !== undefined && data !== null) this.push(data)
-
-    this.updateNextTick()
+    this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
   }
 
   autoBatch (data, cb) {
@@ -272,8 +267,6 @@ class ReadableState {
     pipeTo.on('drain', afterDrain.bind(this))
     this.stream.emit('piping', pipeTo)
     pipeTo.emit('pipe', this.stream)
-
-    this.updateNextTick()
   }
 
   push (data) {
@@ -281,10 +274,7 @@ class ReadableState {
 
     if (data === null) {
       this.highWaterMark = 0
-
       stream._duplexState = (stream._duplexState | READ_ENDING) & READ_NON_PRIMARY_AND_PUSHED
-      this.updateNextTick()
-
       return false
     }
 
@@ -293,7 +283,6 @@ class ReadableState {
     this.queue.push(data)
 
     stream._duplexState = (stream._duplexState | READ_QUEUED) & READ_PUSHED
-    this.updateNextTick()
 
     return this.buffered < this.highWaterMark
   }
@@ -326,7 +315,6 @@ class ReadableState {
       const data = this.shift()
       if (this.pipeTo !== null && this.pipeTo.write(data) === false) stream._duplexState &= READ_PIPE_NOT_DRAINED
       if ((stream._duplexState & READ_EMIT_DATA) !== 0) stream.emit('data', data)
-      this.updateNextTick()
       return data
     }
 
@@ -688,15 +676,18 @@ class Readable extends Stream {
   }
 
   pipe (dest, cb) {
+    this._readableState.updateNextTick()
     this._readableState.pipe(dest, cb)
     return dest
   }
 
   read () {
+    this._readableState.updateNextTick()
     return this._readableState.read()
   }
 
   push (data) {
+    this._readableState.updateNextTick()
     return this._readableState.push(data)
   }
 
@@ -867,10 +858,12 @@ class Writable extends Stream {
   }
 
   write (data) {
+    this._writableState.updateNextTick()
     return this._writableState.push(data)
   }
 
   end (data) {
+    this._writableState.updateNextTick()
     this._writableState.end(data)
     return this
   }
@@ -903,10 +896,12 @@ class Duplex extends Readable { // and Writable
   }
 
   write (data) {
+    this._writableState.updateNextTick()
     return this._writableState.push(data)
   }
 
   end (data) {
+    this._writableState.updateNextTick()
     this._writableState.end(data)
     return this
   }
