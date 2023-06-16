@@ -346,6 +346,7 @@ class ReadableState {
       while (this.buffered < this.highWaterMark && (stream._duplexState & SHOULD_NOT_READ) === 0) {
         stream._duplexState |= READ_ACTIVE_AND_NEEDS_PUSH
         stream._read(this.afterRead)
+        this.drain()
       }
 
       if ((stream._duplexState & READ_READABLE_STATUS) === READ_EMIT_READABLE_AND_QUEUED) {
