@@ -216,7 +216,7 @@ class WritableState {
     return true
   }
 
-  updateSoon () {
+  updateCallback () {
     if ((this.stream._duplexState & WRITE_UPDATE_SYNC_STATUS) === WRITE_PRIMARY) this.update()
     else this.updateNextTick()
   }
@@ -398,7 +398,7 @@ class ReadableState {
     return true
   }
 
-  updateSoon () {
+  updateCallback () {
     if ((this.stream._readableState & READ_UPDATE_SYNC_STATUS) === READ_PRIMARY) this.update()
     else this.updateNextTick()
   }
@@ -463,7 +463,7 @@ class Pipeline {
 
 function afterDrain () {
   this.stream._duplexState |= READ_PIPE_DRAINED
-  this.updateSoon()
+  this.updateCallback()
 }
 
 function afterFinal (err) {
@@ -518,13 +518,13 @@ function afterWrite (err) {
     }
   }
 
-  this.updateSoon()
+  this.updateCallback()
 }
 
 function afterRead (err) {
   if (err) this.stream.destroy(err)
   this.stream._duplexState &= READ_NOT_ACTIVE
-  this.updateSoon()
+  this.updateCallback()
 }
 
 function updateReadNT () {
@@ -565,11 +565,11 @@ function afterOpen (err) {
   stream._duplexState &= NOT_ACTIVE
 
   if (stream._writableState !== null) {
-    stream._writableState.updateSoon()
+    stream._writableState.updateCallback()
   }
 
   if (stream._readableState !== null) {
-    stream._readableState.updateSoon()
+    stream._readableState.updateCallback()
   }
 }
 
