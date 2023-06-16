@@ -191,6 +191,7 @@ test('from async iterator with highWaterMark', function (t) {
 
 test('unshift', async function (t) {
   const r = new Readable()
+  r.pause()
   r.push(1)
   r.push(2)
   r.unshift(0)
