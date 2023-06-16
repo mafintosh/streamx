@@ -696,6 +696,7 @@ class Readable extends Stream {
   }
 
   unshift (data) {
+    this._readableState.updateNextTick()
     return this._readableState.unshift(data)
   }
 
