@@ -304,12 +304,5 @@ test('resume a stalled stream', function (t) {
       })
       r.resume()
     })
-=======
-    t.pass('readable')
-  })
-
-  r.on('data', function (data) {
-    t.is(data, 'data')
->>>>>>> 7f959f1 (allow sync data emits)
   })
 })

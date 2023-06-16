@@ -32,7 +32,7 @@ const READ_EMIT_DATA        = 0b00000100000000 << 4
 const READ_EMIT_READABLE    = 0b00001000000000 << 4
 const READ_EMITTED_READABLE = 0b00010000000000 << 4
 const READ_DONE             = 0b00100000000000 << 4
-const READ_NEXT_TICK        = 0b01000000000001 << 4 // also active
+const READ_NEXT_TICK        = 0b01000000000000 << 4
 const READ_NEEDS_PUSH       = 0b10000000000000 << 4
 
 // Combined read state
@@ -63,7 +63,7 @@ const WRITE_QUEUED     = 0b00000010000 << 18
 const WRITE_UNDRAINED  = 0b00000100000 << 18
 const WRITE_DONE       = 0b00001000000 << 18
 const WRITE_EMIT_DRAIN = 0b00010000000 << 18
-const WRITE_NEXT_TICK  = 0b00100000001 << 18 // also active
+const WRITE_NEXT_TICK  = 0b00100000000 << 18
 const WRITE_FINISHING  = 0b01000000000 << 18
 const WRITE_WRITING    = 0b10000000000 << 18
 
@@ -74,7 +74,7 @@ const WRITE_NOT_FINISHING = MAX ^ WRITE_FINISHING
 const WRITE_DRAINED       = MAX ^ WRITE_UNDRAINED
 const WRITE_NOT_QUEUED    = MAX ^ WRITE_QUEUED
 const WRITE_NOT_NEXT_TICK = MAX ^ WRITE_NEXT_TICK
-const WRITE_NOT_UPDATING   = MAX ^ WRITE_UPDATING
+const WRITE_NOT_UPDATING  = MAX ^ WRITE_UPDATING
 
 // Combined shared state
 const ACTIVE = READ_ACTIVE | WRITE_ACTIVE
@@ -95,7 +95,7 @@ const READ_ENDING_STATUS = OPEN_STATUS | READ_ENDING | READ_QUEUED
 const READ_READABLE_STATUS = OPEN_STATUS | READ_EMIT_READABLE | READ_QUEUED | READ_EMITTED_READABLE
 const SHOULD_NOT_READ = OPEN_STATUS | READ_ACTIVE | READ_ENDING | READ_DONE | READ_NEEDS_PUSH
 const READ_BACKPRESSURE_STATUS = DESTROY_STATUS | READ_ENDING | READ_DONE
-const READ_UPDATE_STATUS = READ_UPDATING | OPEN_STATUS | READ_NEXT_TICK & READ_NOT_ACTIVE
+const READ_UPDATE_SYNC_STATUS = READ_UPDATING | OPEN_STATUS | READ_NEXT_TICK | READ_NON_PRIMARY
 
 // Combined write state
 const WRITE_PRIMARY_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_DONE
@@ -107,7 +107,7 @@ const WRITE_PRIMARY_AND_ACTIVE = WRITE_PRIMARY | WRITE_ACTIVE
 const WRITE_ACTIVE_AND_SYNC = WRITE_ACTIVE | WRITE_SYNC | WRITE_WRITING
 const WRITE_FINISHING_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_QUEUED_AND_ACTIVE | WRITE_DONE
 const WRITE_BACKPRESSURE_STATUS = WRITE_UNDRAINED | DESTROY_STATUS | WRITE_FINISHING | WRITE_DONE
-const WRITE_UPDATE_STATUS = WRITE_UPDATING | OPEN_STATUS | WRITE_NEXT_TICK & WRITE_NOT_ACTIVE
+const WRITE_UPDATE_SYNC_STATUS = WRITE_UPDATING | OPEN_STATUS | WRITE_NEXT_TICK | WRITE_NON_PRIMARY
 
 const asyncIterator = Symbol.asyncIterator || Symbol('asyncIterator')
 
@@ -135,7 +135,7 @@ class WritableState {
 
     this.buffered += this.byteLength(data)
     this.queue.push(data)
-    this.updateMaybeSync()
+    this.updateASAP()
 
     if (this.buffered < this.highWaterMark) {
       this.stream._duplexState |= WRITE_QUEUED
@@ -160,7 +160,7 @@ class WritableState {
     if (typeof data === 'function') this.stream.once('finish', data)
     else if (data !== undefined && data !== null) this.push(data)
     this.stream._duplexState = (this.stream._duplexState | WRITE_FINISHING) & WRITE_NON_PRIMARY
-    this.updateNextTick()
+    this.updateASAP()
   }
 
   autoBatch (data, cb) {
@@ -176,8 +176,8 @@ class WritableState {
     stream._writev(buffer, cb)
   }
 
-  updateMaybeSync () {
-    if ((this.stream._duplexState & WRITE_UPDATE_STATUS) === 0) this.update()
+  updateASAP () {
+    if ((this.stream._duplexState & WRITE_UPDATE_SYNC_STATUS) === 0) this.update()
     else this.updateNextTick()
   }
 
@@ -273,7 +273,7 @@ class ReadableState {
     this.stream.emit('piping', pipeTo)
     pipeTo.emit('pipe', this.stream)
 
-    this.updateMaybeSync()
+    this.updateASAP()
   }
 
   push (data) {
@@ -283,7 +283,7 @@ class ReadableState {
       this.highWaterMark = 0
 
       stream._duplexState = (stream._duplexState | READ_ENDING) & READ_NON_PRIMARY_AND_PUSHED
-      this.updateNextTick()
+      this.updateASAP()
 
       return false
     }
@@ -293,7 +293,7 @@ class ReadableState {
     this.queue.push(data)
 
     stream._duplexState = (stream._duplexState | READ_QUEUED) & READ_PUSHED
-    this.updateMaybeSync()
+    this.updateASAP()
 
     return this.buffered < this.highWaterMark
   }
@@ -343,8 +343,8 @@ class ReadableState {
     }
   }
 
-  updateMaybeSync () {
-    if ((this.stream._readableState & READ_UPDATE_STATUS) === 0) this.update()
+  updateASAP () {
+    if ((this.stream._readableState & READ_UPDATE_SYNC_STATUS) === 0) this.update()
     else this.updateNextTick()
   }
 
@@ -352,6 +352,8 @@ class ReadableState {
     const stream = this.stream
 
     stream._duplexState |= READ_UPDATING
+
+    this.drain()
 
     while (this.buffered < this.highWaterMark && (stream._duplexState & SHOULD_NOT_READ) === 0) {
       stream._duplexState |= READ_ACTIVE_AND_SYNC_AND_NEEDS_PUSH
@@ -364,8 +366,6 @@ class ReadableState {
       stream._duplexState |= READ_EMITTED_READABLE
       stream.emit('readable')
     }
-
-    this.drain()
 
     if ((stream._duplexState & READ_PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
 
@@ -456,7 +456,7 @@ class Pipeline {
 
 function afterDrain () {
   this.stream._duplexState |= READ_PIPE_DRAINED
-  if ((this.stream._duplexState & READ_ACTIVE_AND_SYNC) === 0) this.updateMaybeSync()
+  if ((this.stream._duplexState & READ_ACTIVE_AND_SYNC) === 0) this.updateASAP()
   else this.drain()
 }
 
@@ -520,12 +520,12 @@ function afterRead (err) {
 
 function updateReadNT () {
   this.stream._duplexState &= READ_NOT_NEXT_TICK
-  this.update()
+  if ((this.stream._duplexState & READ_UPDATING) === 0) this.update()
 }
 
 function updateWriteNT () {
   this.stream._duplexState &= WRITE_NOT_NEXT_TICK
-  this.update()
+  if ((this.stream._duplexState & WRITE_UPDATING) === 0) this.update()
 }
 
 function tickDrains (drains) {
