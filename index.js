@@ -607,7 +607,7 @@ class Stream extends EventEmitter {
       }
     }
 
-    this.on('newListener', newListener.bind(this))
+    this.on('newListener', newListener)
   }
 
   _open (cb) {
