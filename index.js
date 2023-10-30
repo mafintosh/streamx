@@ -942,6 +942,14 @@ class Transform extends Duplex {
     }
   }
 
+  destroy (err) {
+    super.destroy(err)
+    if (this._transformState.data !== null) {
+      this._transformState.data = null
+      this._transformState.afterTransform()
+    }
+  }
+
   _transform (data, cb) {
     cb(null, data)
   }
