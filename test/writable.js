@@ -215,6 +215,51 @@ test('drained helper', async function (t) {
   t.absent(await Writable.drained(w), 'already destroyed')
 })
 
+test('drained helper, duplex', async function (t) {
+  const w = new Duplex({
+    write (data, cb) {
+      setImmediate(cb)
+    }
+  })
+
+  for (let i = 0; i < 20; i++) w.write('hi')
+
+  await Writable.drained(w)
+
+  t.is(w._writableState.queue.length, 0)
+
+  for (let i = 0; i < 20; i++) w.write('hi')
+
+  const d1 = Writable.drained(w)
+
+  for (let i = 0; i < 20; i++) w.write('hi')
+
+  const d2 = Writable.drained(w)
+
+  d1.then(() => {
+    t.not(w._writableState.queue.length, 0, 'future writes are queued')
+  })
+
+  d2.then(() => {
+    t.is(w._writableState.queue.length, 0, 'all drained now')
+  })
+
+  await d1
+  await d2
+
+  await Writable.drained(w)
+
+  t.pass('works if no writes are pending')
+
+  for (let i = 0; i < 20; i++) w.write('hi')
+
+  const d3 = Writable.drained(w)
+  w.destroy()
+
+  t.absent(await d3)
+  t.absent(await Writable.drained(w), 'already destroyed')
+})
+
 test('drained helper, inflight write', async function (t) {
   let writing = false
   const w = new Writable({

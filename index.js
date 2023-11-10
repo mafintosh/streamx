@@ -854,7 +854,7 @@ class Writable extends Stream {
   static drained (ws) {
     if (ws.destroyed) return Promise.resolve(false)
     const state = ws._writableState
-    const writes = (ws._writev === Writable.prototype._writev ? state.queue.length : 1) + ((ws._duplexState & WRITE_WRITING) ? 1 : 0)
+    const writes = (isWritev(ws) ? 1 : state.queue.length) + ((ws._duplexState & WRITE_WRITING) ? 1 : 0)
     if (writes === 0) return Promise.resolve(true)
     if (state.drains === null) state.drains = []
     return new Promise((resolve) => {
@@ -1076,6 +1076,10 @@ function noop () {}
 
 function abort () {
   this.destroy(new Error('Stream aborted.'))
+}
+
+function isWritev (s) {
+  return s._writev !== Writable.prototype._writev && s._writev !== Duplex.prototype._writev
 }
 
 module.exports = {
