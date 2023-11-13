@@ -306,3 +306,14 @@ test('drained helper, writev', async function (t) {
   await Writable.drained(w)
   t.ok(writing === 0, 'not writing')
 })
+
+test('drained helper, writev, already flushed', async function (t) {
+  const w = new Writable({
+    writev (datas, cb) {
+      cb()
+    }
+  })
+
+  await Writable.drained(w)
+  t.pass('drained resovled')
+})

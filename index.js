@@ -854,7 +854,8 @@ class Writable extends Stream {
   static drained (ws) {
     if (ws.destroyed) return Promise.resolve(false)
     const state = ws._writableState
-    const writes = (isWritev(ws) ? 1 : state.queue.length) + ((ws._duplexState & WRITE_WRITING) ? 1 : 0)
+    const pending = (isWritev(ws) ? Math.min(1, state.queue.length) : state.queue.length)
+    const writes = pending + ((ws._duplexState & WRITE_WRITING) ? 1 : 0)
     if (writes === 0) return Promise.resolve(true)
     if (state.drains === null) state.drains = []
     return new Promise((resolve) => {
