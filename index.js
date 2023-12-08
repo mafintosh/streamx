@@ -570,6 +570,26 @@ function afterTransform (err, data) {
   this._writableState.afterWrite(err)
 }
 
+function newListener (name) {
+  if (this._readableState !== null) {
+    if (name === 'data') {
+      this._duplexState |= (READ_EMIT_DATA | READ_RESUMED)
+      this._readableState.updateNextTick()
+    }
+    if (name === 'readable') {
+      this._duplexState |= READ_EMIT_READABLE
+      this._readableState.updateNextTick()
+    }
+  }
+
+  if (this._writableState !== null) {
+    if (name === 'drain') {
+      this._duplexState |= WRITE_EMIT_DRAIN
+      this._writableState.updateNextTick()
+    }
+  }
+}
+
 class Stream extends EventEmitter {
   constructor (opts) {
     super()
@@ -586,6 +606,8 @@ class Stream extends EventEmitter {
         opts.signal.addEventListener('abort', abort.bind(this))
       }
     }
+
+    this.on('newListener', newListener)
   }
 
   _open (cb) {
@@ -637,28 +659,6 @@ class Stream extends EventEmitter {
       if (this._readableState !== null) this._readableState.updateNextTick()
       if (this._writableState !== null) this._writableState.updateNextTick()
     }
-  }
-
-  on (name, fn) {
-    if (this._readableState !== null) {
-      if (name === 'data') {
-        this._duplexState |= (READ_EMIT_DATA | READ_RESUMED)
-        this._readableState.updateNextTick()
-      }
-      if (name === 'readable') {
-        this._duplexState |= READ_EMIT_READABLE
-        this._readableState.updateNextTick()
-      }
-    }
-
-    if (this._writableState !== null) {
-      if (name === 'drain') {
-        this._duplexState |= WRITE_EMIT_DRAIN
-        this._writableState.updateNextTick()
-      }
-    }
-
-    return super.on(name, fn)
   }
 }
 
