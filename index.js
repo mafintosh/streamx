@@ -232,12 +232,12 @@ class WritableState {
 }
 
 class ReadableState {
-  constructor (stream, { readAhead = true, highWaterMark = 16384, map = null, mapReadable, byteLength, byteLengthReadable } = {}) {
+  constructor (stream, { highWaterMark = 16384, map = null, mapReadable, byteLength, byteLengthReadable } = {}) {
     this.stream = stream
     this.queue = new FIFO()
-    this.highWaterMark = highWaterMark
+    this.highWaterMark = highWaterMark === 0 ? 1 : highWaterMark
     this.buffered = 0
-    this.readAhead = readAhead
+    this.readAhead = highWaterMark > 0
     this.error = null
     this.pipeline = null
     this.byteLength = byteLengthReadable || byteLength || defaultByteLength
@@ -681,7 +681,7 @@ class Readable extends Stream {
     this._readableState = new ReadableState(this, opts)
 
     if (opts) {
-      if (opts.readAhead === false) this._duplexState &= READ_NO_READ_AHEAD
+      if (this._readableState.readAhead === false) this._duplexState &= READ_NO_READ_AHEAD
       if (opts.read) this._read = opts.read
       if (opts.eagerOpen) this._readableState.updateNextTick()
     }

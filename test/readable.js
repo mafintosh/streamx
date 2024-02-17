@@ -309,7 +309,7 @@ test('no read-ahead with pause/resume', function (t) {
   let tick = 0
 
   const r = new Readable({
-    readAhead: false,
+    highWaterMark: 0,
     read (cb) {
       this.push('tick: ' + (++tick))
       cb()
@@ -337,7 +337,7 @@ test('no read-ahead with async iterator', async function (t) {
   let tick = 0
 
   const r = new Readable({
-    readAhead: false,
+    highWaterMark: 0,
     read (cb) {
       this.push('tick: ' + (++tick))
       if (tick === 10) this.push(null)
