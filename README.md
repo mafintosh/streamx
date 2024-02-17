@@ -111,7 +111,8 @@ Options include:
   map: (data) => data, // optional function to map input data
   byteLength: (data) => size, // optional function that calculates the byte size of input data
   signal: abortController.signal, // optional AbortSignal that triggers `.destroy` when on `abort`
-  eagerOpen: false // eagerly open the stream
+  eagerOpen: false, // eagerly open the stream
+  readAhead: true // should the stream read ahead (default) or wait for the user to empty the buffer first
 }
 ```
 
