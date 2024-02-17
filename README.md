@@ -111,8 +111,7 @@ Options include:
   map: (data) => data, // optional function to map input data
   byteLength: (data) => size, // optional function that calculates the byte size of input data
   signal: abortController.signal, // optional AbortSignal that triggers `.destroy` when on `abort`
-  eagerOpen: false, // eagerly open the stream
-  readAhead: true // should the stream read ahead (default) or wait for the user to empty the buffer first
+  eagerOpen: false // eagerly open the stream
 }
 ```
 
@@ -122,6 +121,9 @@ the constructor instead of overwrite the methods below.
 The default byteLength function returns the byte length of buffers and `1024`
 for any other object. This means the buffer will contain around 16 non buffers
 or buffers worth 16kb when full if the defaults are used.
+
+If you set highWaterMark to `0` then all read ahead buffering on the stream
+is disabled and it will only call `_read` when a user reads rather than ahead of time.
 
 #### `rs._read(cb)`
 
