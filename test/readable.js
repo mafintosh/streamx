@@ -22,10 +22,6 @@ test('ondata', function (t) {
   })
 })
 
-function nextImmediate () {
-  return new Promise(resolve => setImmediate(resolve))
-}
-
 test('pause', async function (t) {
   const r = new Readable()
   const buffered = []
@@ -306,3 +302,59 @@ test('resume a stalled stream', function (t) {
     })
   })
 })
+
+test('no read-ahead with pause/resume', function (t) {
+  t.plan(4)
+
+  let tick = 0
+
+  const r = new Readable({
+    highWaterMark: 0,
+    read (cb) {
+      this.push('tick: ' + (++tick))
+      cb()
+    }
+  })
+
+  r.once('data', function () {
+    t.is(tick, 1)
+    r.pause()
+    setImmediate(() => {
+      t.is(tick, 1)
+      r.resume()
+      r.once('data', function () {
+        t.is(tick, 2)
+        r.pause()
+        setImmediate(() => {
+          t.is(tick, 2)
+        })
+      })
+    })
+  })
+})
+
+test('no read-ahead with async iterator', async function (t) {
+  let tick = 0
+
+  const r = new Readable({
+    highWaterMark: 0,
+    read (cb) {
+      this.push('tick: ' + (++tick))
+      if (tick === 10) this.push(null)
+      cb()
+    }
+  })
+
+  let expectedTick = 0
+  for await (const data of r) {
+    t.is(tick, ++expectedTick)
+    t.is(data, 'tick: ' + tick)
+    await nextImmediate()
+  }
+
+  t.is(expectedTick, 10)
+})
+
+function nextImmediate () {
+  return new Promise(resolve => setImmediate(resolve))
+}
