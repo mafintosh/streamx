@@ -891,7 +891,7 @@ class Duplex extends Readable { // and Writable
   constructor (opts) {
     super(opts)
 
-    this._duplexState = OPENING
+    this._duplexState = OPENING | (this._duplexState & READ_READ_AHEAD)
     this._writableState = new WritableState(this, opts)
 
     if (opts) {

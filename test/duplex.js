@@ -52,6 +52,20 @@ test('get error from stream', function (t) {
   const err = new Error('stop')
   d.destroy(err)
   t.is(getStreamError(d), err)
+})
 
-  t.end()
+test('wait for readable', function (t) {
+  t.plan(1)
+
+  const d = new Duplex({
+    read (cb) {
+      d.push('ok')
+      d.push(null)
+      cb()
+    }
+  })
+
+  d.on('readable', function () {
+    t.is(d.read(), 'ok')
+  })
 })
