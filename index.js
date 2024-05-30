@@ -7,8 +7,8 @@ const FIFO = require('fast-fifo')
 
 /* eslint-disable no-multi-spaces */
 
-// 28 bits used total (4 from shared, 14 from read, and 10 from write)
-const MAX = ((1 << 28) - 1)
+// 29 bits used total (4 from shared, 14 from read, and 11 from write)
+const MAX = ((1 << 29) - 1)
 
 // Shared state
 const OPENING       = 0b0001
@@ -55,17 +55,18 @@ const READ_NOT_UPDATING           = MAX ^ READ_UPDATING
 const READ_NO_READ_AHEAD          = MAX ^ READ_READ_AHEAD
 const READ_PAUSED_NO_READ_AHEAD   = MAX ^ READ_RESUMED_READ_AHEAD
 
-// Write state (18 bit offset, 4 bit offset from shared state and 13 from read state)
-const WRITE_ACTIVE     = 0b0000000001 << 18
-const WRITE_UPDATING   = 0b0000000010 << 18
-const WRITE_PRIMARY    = 0b0000000100 << 18
-const WRITE_QUEUED     = 0b0000001000 << 18
-const WRITE_UNDRAINED  = 0b0000010000 << 18
-const WRITE_DONE       = 0b0000100000 << 18
-const WRITE_EMIT_DRAIN = 0b0001000000 << 18
-const WRITE_NEXT_TICK  = 0b0010000000 << 18
-const WRITE_WRITING    = 0b0100000000 << 18
-const WRITE_FINISHING  = 0b1000000000 << 18
+// Write state (18 bit offset, 4 bit offset from shared state and 14 from read state)
+const WRITE_ACTIVE     = 0b00000000001 << 18
+const WRITE_UPDATING   = 0b00000000010 << 18
+const WRITE_PRIMARY    = 0b00000000100 << 18
+const WRITE_QUEUED     = 0b00000001000 << 18
+const WRITE_UNDRAINED  = 0b00000010000 << 18
+const WRITE_DONE       = 0b00000100000 << 18
+const WRITE_EMIT_DRAIN = 0b00001000000 << 18
+const WRITE_NEXT_TICK  = 0b00010000000 << 18
+const WRITE_WRITING    = 0b00100000000 << 18
+const WRITE_FINISHING  = 0b01000000000 << 18
+const WRITE_CORKED     = 0b10000000000 << 18
 
 const WRITE_NOT_ACTIVE    = MAX ^ (WRITE_ACTIVE | WRITE_WRITING)
 const WRITE_NON_PRIMARY   = MAX ^ WRITE_PRIMARY
@@ -74,6 +75,7 @@ const WRITE_DRAINED       = MAX ^ WRITE_UNDRAINED
 const WRITE_NOT_QUEUED    = MAX ^ WRITE_QUEUED
 const WRITE_NOT_NEXT_TICK = MAX ^ WRITE_NEXT_TICK
 const WRITE_NOT_UPDATING  = MAX ^ WRITE_UPDATING
+const WRITE_NOT_CORKED    = MAX ^ WRITE_CORKED
 
 // Combined shared state
 const ACTIVE = READ_ACTIVE | WRITE_ACTIVE
@@ -101,7 +103,7 @@ const WRITE_PRIMARY_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_DONE
 const WRITE_QUEUED_AND_UNDRAINED = WRITE_QUEUED | WRITE_UNDRAINED
 const WRITE_QUEUED_AND_ACTIVE = WRITE_QUEUED | WRITE_ACTIVE
 const WRITE_DRAIN_STATUS = WRITE_QUEUED | WRITE_UNDRAINED | OPEN_STATUS | WRITE_ACTIVE
-const WRITE_STATUS = OPEN_STATUS | WRITE_ACTIVE | WRITE_QUEUED
+const WRITE_STATUS = OPEN_STATUS | WRITE_ACTIVE | WRITE_QUEUED | WRITE_CORKED
 const WRITE_PRIMARY_AND_ACTIVE = WRITE_PRIMARY | WRITE_ACTIVE
 const WRITE_ACTIVE_AND_WRITING = WRITE_ACTIVE | WRITE_WRITING
 const WRITE_FINISHING_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_QUEUED_AND_ACTIVE | WRITE_DONE
@@ -845,6 +847,15 @@ class Writable extends Stream {
       if (opts.final) this._final = opts.final
       if (opts.eagerOpen) this._writableState.updateNextTick()
     }
+  }
+
+  cork () {
+    this._duplexState |= WRITE_CORKED
+  }
+
+  uncork () {
+    this._duplexState &= WRITE_NOT_CORKED
+    this._writableState.updateNextTick()
   }
 
   _writev (batch, cb) {

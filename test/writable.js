@@ -317,3 +317,26 @@ test('drained helper, writev, already flushed', async function (t) {
   await Writable.drained(w)
   t.pass('drained resovled')
 })
+
+test('can cork and uncork the stream', async function (t) {
+  const w = new Writable({
+    writev (batch, cb) {
+      t.alike(batch, [1, 2, 3])
+      cb(null)
+    }
+  })
+
+  w.cork()
+  w.write(1)
+  await eventFlush()
+  w.write(2)
+  await eventFlush()
+  w.write(3)
+  w.uncork()
+
+  await Writable.drained(w)
+})
+
+function eventFlush () {
+  return new Promise(resolve => setImmediate(resolve))
+}
