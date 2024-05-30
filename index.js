@@ -912,6 +912,15 @@ class Duplex extends Readable { // and Writable
     }
   }
 
+  cork () {
+    this._duplexState |= WRITE_CORKED
+  }
+
+  uncork () {
+    this._duplexState &= WRITE_NOT_CORKED
+    this._writableState.updateNextTick()
+  }
+
   _writev (batch, cb) {
     cb(null)
   }
