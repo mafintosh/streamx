@@ -4,6 +4,7 @@ const PREMATURE_CLOSE = new Error('Premature close')
 
 const queueTick = require('queue-tick')
 const FIFO = require('fast-fifo')
+const TextDecoder = require('text-decoder')
 
 /* eslint-disable no-multi-spaces */
 
@@ -289,7 +290,11 @@ class ReadableState {
       return false
     }
 
-    if (this.map !== null) data = this.map(data)
+    if (this.map !== null) {
+      data = this.map(data)
+      if (data === null) return this.buffered < this.highWaterMark
+    }
+
     this.buffered += this.byteLength(data)
     this.queue.push(data)
 
@@ -686,6 +691,19 @@ class Readable extends Stream {
       if (this._readableState.readAhead === false) this._duplexState &= READ_NO_READ_AHEAD
       if (opts.read) this._read = opts.read
       if (opts.eagerOpen) this._readableState.updateNextTick()
+      if (opts.encoding) this.setEncoding(opts.encoding)
+    }
+  }
+
+  setEncoding (encoding) {
+    const dec = new TextDecoder(encoding)
+    const map = this._readableState.map || echo
+    this._readableState.map = mapOrSkip
+    return this
+
+    function mapOrSkip (data) {
+      const next = dec.push(data)
+      return next === '' ? null : map(next)
     }
   }
 
@@ -1069,6 +1087,10 @@ function pipeline (stream, ...streams) {
       s.destroy(err)
     }
   }
+}
+
+function echo (s) {
+  return s
 }
 
 function isStream (stream) {

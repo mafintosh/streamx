@@ -1,4 +1,5 @@
 const test = require('brittle')
+const b4a = require('b4a')
 const { Readable } = require('../')
 
 test('ondata', function (t) {
@@ -353,6 +354,38 @@ test('no read-ahead with async iterator', async function (t) {
   }
 
   t.is(expectedTick, 10)
+})
+
+test('setEncoding', async function (t) {
+  const r = new Readable()
+
+  r.setEncoding('utf-8')
+  const buffer = b4a.from('hællå wørld!')
+  for (let i = 0; i < buffer.byteLength; i++) {
+    r.push(buffer.subarray(i, i + 1))
+  }
+  r.push(null)
+  const expected = b4a.toString(buffer).split('')
+  for await (const data of r) {
+    t.is(data, expected.shift())
+  }
+  t.is(expected.length, 0)
+})
+
+test('setEncoding respects existing map', async function (t) {
+  t.plan(1)
+
+  const r = new Readable({
+    encoding: 'utf-8',
+    map (data) {
+      return JSON.parse(data)
+    }
+  })
+
+  r.push('{"hello":"world"}')
+  r.once('data', function (data) {
+    t.alike(data, { hello: 'world' })
+  })
 })
 
 function nextImmediate () {
