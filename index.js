@@ -4,7 +4,6 @@ const PREMATURE_CLOSE = new Error('Premature close')
 
 const queueTick = require('queue-tick')
 const FIFO = require('fast-fifo')
-const TextDecoder = require('text-decoder')
 
 /* eslint-disable no-multi-spaces */
 
@@ -702,7 +701,15 @@ class Readable extends Stream {
     return this
 
     function mapOrSkip (data) {
-      const next = dec.push(data)
+      let next
+
+      try {
+        next = dec.decode(data, { stream: true })
+      } catch (error) {
+        // text decoder will throw error if it can't decode the data
+        next = data
+      }
+
       return next === '' ? null : map(next)
     }
   }
