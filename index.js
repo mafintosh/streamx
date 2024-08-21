@@ -1114,7 +1114,7 @@ function getStreamError (stream, opts = {}) {
   const err = (stream._readableState && stream._readableState.error) || (stream._writableState && stream._writableState.error)
 
   // avoid implicit errors by default
-  return !opts.all && err === STREAM_DESTROYED ? null : err
+  return (!opts.all && err === STREAM_DESTROYED) ? null : err
 }
 
 function isReadStreamx (stream) {
