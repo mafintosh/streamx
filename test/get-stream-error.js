@@ -19,7 +19,6 @@ test('getStreamError, basic', function (t) {
 
 test('getStreamError, only explicit errors by default', function (t) {
   const stream = new Readable()
-  stream.on('error', () => {})
 
   stream.destroy()
 
@@ -28,7 +27,6 @@ test('getStreamError, only explicit errors by default', function (t) {
 
 test('getStreamError, get premature destroy', function (t) {
   const stream = new Readable()
-  stream.on('error', () => {})
 
   stream.destroy()
 
