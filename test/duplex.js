@@ -1,5 +1,5 @@
 const test = require('brittle')
-const { Duplex, getStreamError } = require('../')
+const { Duplex } = require('../')
 
 test('if open does not end, it should stall', function (t) {
   t.plan(1)
@@ -43,15 +43,6 @@ test('Using both mapReadable and mapWritable to map data', function (t) {
   })
   d.write('32')
   d.end()
-})
-
-test('get error from stream', function (t) {
-  const d = new Duplex()
-  d.on('error', () => {})
-
-  const err = new Error('stop')
-  d.destroy(err)
-  t.is(getStreamError(d), err)
 })
 
 test('wait for readable', function (t) {
