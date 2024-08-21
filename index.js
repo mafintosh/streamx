@@ -1110,9 +1110,11 @@ function isStreamx (stream) {
   return typeof stream._duplexState === 'number' && isStream(stream)
 }
 
-function getStreamError (stream) {
+function getStreamError (stream, opts = {}) {
   const err = (stream._readableState && stream._readableState.error) || (stream._writableState && stream._writableState.error)
-  return err === STREAM_DESTROYED ? null : err // only explicit errors
+
+  // avoid implicit errors by default
+  return (!opts.all && err === STREAM_DESTROYED) ? null : err
 }
 
 function isReadStreamx (stream) {
