@@ -292,7 +292,10 @@ class ReadableState {
 
     if (this.map !== null) {
       data = this.map(data)
-      if (data === null) return this.buffered < this.highWaterMark
+      if (data === null) {
+        stream._duplexState &= READ_PUSHED
+        return this.buffered < this.highWaterMark
+      }
     }
 
     this.buffered += this.byteLength(data)
