@@ -1113,6 +1113,14 @@ function isStreamx (stream) {
   return typeof stream._duplexState === 'number' && isStream(stream)
 }
 
+function isEnded (stream) {
+  return !!stream._readableState && stream._readableState.ended
+}
+
+function isFinished (stream) {
+  return !!stream._writableState && stream._writableState.ended
+}
+
 function getStreamError (stream, opts = {}) {
   const err = (stream._readableState && stream._readableState.error) || (stream._writableState && stream._writableState.error)
 
@@ -1147,6 +1155,8 @@ module.exports = {
   pipelinePromise,
   isStream,
   isStreamx,
+  isEnded,
+  isFinished,
   getStreamError,
   Stream,
   Writable,
