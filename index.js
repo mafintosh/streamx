@@ -706,7 +706,7 @@ class Readable extends Stream {
 
     function mapOrSkip (data) {
       const next = dec.push(data)
-      return next === '' ? null : map(next)
+      return next === '' && (data.byteLength !== 0 || dec.remaining > 0) ? null : map(next)
     }
   }
 

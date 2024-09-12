@@ -388,6 +388,21 @@ test('setEncoding respects existing map', async function (t) {
   })
 })
 
+test('setEncoding empty string', async function (t) {
+  t.plan(1)
+
+  const r = new Readable()
+
+  r.setEncoding('utf-8')
+  const buffer = b4a.from('')
+  r.push(buffer)
+  r.push(null)
+
+  for await (const data of r) {
+    t.is(data, '')
+  }
+})
+
 function nextImmediate () {
   return new Promise(resolve => setImmediate(resolve))
 }
