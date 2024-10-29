@@ -2,6 +2,28 @@ const test = require('brittle')
 const compat = require('stream')
 const { Readable, Writable } = require('../')
 
+test('pipe to node stream - error case', function (t) {
+  t.plan(1)
+
+  const expectedErr = new Error('blerg')
+  process.once('uncaughtException', function (err) {
+    t.is(err, expectedErr)
+  })
+
+  const r = new Readable()
+  const w = new compat.Writable({
+    write (data, enc, cb) {
+      cb(expectedErr)
+    }
+  })
+
+  r.push('hi')
+  r.push('ho')
+  r.push(null)
+
+  r.pipe(w)
+})
+
 test('pipe to node stream', function (t) {
   t.plan(3)
 

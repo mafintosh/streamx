@@ -269,9 +269,16 @@ class ReadableState {
       if (cb) pipeTo.on('error', noop) // We already error handle this so supress crashes
       pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline)) // TODO: just call finished from pipeTo itself
     } else {
-      const onerror = this.pipeline.done.bind(this.pipeline, pipeTo)
       const onclose = this.pipeline.done.bind(this.pipeline, pipeTo, null) // onclose has a weird bool arg
-      pipeTo.on('error', onerror)
+      pipeTo.once('error', (err) => {
+        if (!cb) {
+          if (pipeTo.listenerCount('error') === 0) {
+            pipeTo.emit('error', err)
+          }
+        }
+
+        this.pipeline.done(pipeTo, err)
+      })
       pipeTo.on('close', onclose)
       pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline))
     }
