@@ -60,3 +60,26 @@ test('wait for readable', function (t) {
     t.is(d.read(), 'ok')
   })
 })
+
+test('write during end', function (t) {
+  t.plan(3)
+
+  const expected = ['a', 'b']
+
+  const w = new Duplex({
+    write (data, cb) {
+      t.is(data, expected.shift())
+      cb(null)
+    },
+    final (cb) {
+      w.write('bad')
+      cb(null)
+    }
+  })
+
+  w.write('a')
+  w.write('b')
+  w.end()
+  w.on('finish', () => w.push(null))
+  w.on('close', () => t.pass('closed'))
+})
