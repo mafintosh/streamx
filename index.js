@@ -112,6 +112,8 @@ const WRITE_BACKPRESSURE_STATUS = WRITE_UNDRAINED | DESTROY_STATUS | WRITE_FINIS
 const WRITE_UPDATE_SYNC_STATUS = WRITE_UPDATING | OPEN_STATUS | WRITE_NEXT_TICK | WRITE_PRIMARY
 const WRITE_DROP_DATA = WRITE_FINISHING | WRITE_DONE | DESTROY_STATUS
 
+const DISTURBED_STATUS = OPEN_STATUS | READ_RESUMED_READ_AHEAD | WRITE_QUEUED
+
 const asyncIterator = Symbol.asyncIterator || Symbol('asyncIterator')
 
 class WritableState {
@@ -1134,6 +1136,10 @@ function isReadStreamx (stream) {
   return isStreamx(stream) && stream.readable
 }
 
+function isDisturbed (stream) {
+  return (stream._duplexState & DISTURBED_STATUS) !== OPENING
+}
+
 function isTypedArray (data) {
   return typeof data === 'object' && data !== null && typeof data.byteLength === 'number'
 }
@@ -1157,6 +1163,7 @@ module.exports = {
   pipelinePromise,
   isStream,
   isStreamx,
+  isDisturbed,
   isEnded,
   isFinished,
   getStreamError,
