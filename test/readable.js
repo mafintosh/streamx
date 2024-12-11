@@ -405,12 +405,13 @@ test('setEncoding empty string', async function (t) {
 
 test('is disturbed', function (t) {
   const r = new Readable()
+  t.is(isDisturbed(r), false)
 
-  t.not(isDisturbed(r))
+  r.push('hello')
+  t.is(isDisturbed(r), false)
 
   r.resume()
-
-  t.ok(isDisturbed(r))
+  t.is(isDisturbed(r), true)
 })
 
 function nextImmediate () {
