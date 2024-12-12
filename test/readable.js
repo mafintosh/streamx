@@ -72,7 +72,7 @@ test('lazy open', async function (t) {
   })
   await nextImmediate()
   t.absent(opened)
-  r.push(null)
+  r.read()
   await nextImmediate()
   t.ok(opened)
 })
@@ -405,12 +405,16 @@ test('setEncoding empty string', async function (t) {
 
 test('is disturbed', function (t) {
   const r = new Readable()
+  t.is(isDisturbed(r), false)
 
-  t.not(isDisturbed(r))
+  r.push('hello')
+  t.is(isDisturbed(r), false)
 
   r.resume()
+  t.is(isDisturbed(r), true)
 
-  t.ok(isDisturbed(r))
+  r.pause()
+  t.is(isDisturbed(r), true)
 })
 
 function nextImmediate () {

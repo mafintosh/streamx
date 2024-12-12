@@ -98,6 +98,7 @@ const READ_READABLE_STATUS = OPEN_STATUS | READ_EMIT_READABLE | READ_QUEUED | RE
 const SHOULD_NOT_READ = OPEN_STATUS | READ_ACTIVE | READ_ENDING | READ_DONE | READ_NEEDS_PUSH | READ_READ_AHEAD
 const READ_BACKPRESSURE_STATUS = DESTROY_STATUS | READ_ENDING | READ_DONE
 const READ_UPDATE_SYNC_STATUS = READ_UPDATING | OPEN_STATUS | READ_NEXT_TICK | READ_PRIMARY
+const READ_NEXT_TICK_OR_OPENING = READ_NEXT_TICK | OPENING
 
 // Combined write state
 const WRITE_PRIMARY_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_DONE
@@ -111,8 +112,6 @@ const WRITE_FINISHING_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_QUEUED_AND_
 const WRITE_BACKPRESSURE_STATUS = WRITE_UNDRAINED | DESTROY_STATUS | WRITE_FINISHING | WRITE_DONE
 const WRITE_UPDATE_SYNC_STATUS = WRITE_UPDATING | OPEN_STATUS | WRITE_NEXT_TICK | WRITE_PRIMARY
 const WRITE_DROP_DATA = WRITE_FINISHING | WRITE_DONE | DESTROY_STATUS
-
-const DISTURBED_STATUS = OPEN_STATUS | READ_RESUMED_READ_AHEAD | WRITE_QUEUED
 
 const asyncIterator = Symbol.asyncIterator || Symbol('asyncIterator')
 
@@ -417,6 +416,12 @@ class ReadableState {
   updateCallback () {
     if ((this.stream._duplexState & READ_UPDATE_SYNC_STATUS) === READ_PRIMARY) this.update()
     else this.updateNextTick()
+  }
+
+  updateNextTickIfOpen () {
+    if ((this.stream._duplexState & READ_NEXT_TICK_OR_OPENING) !== 0) return
+    this.stream._duplexState |= READ_NEXT_TICK
+    if ((this.stream._duplexState & READ_UPDATING) === 0) queueTick(this.afterUpdateNextTick)
   }
 
   updateNextTick () {
@@ -730,12 +735,12 @@ class Readable extends Stream {
   }
 
   push (data) {
-    this._readableState.updateNextTick()
+    this._readableState.updateNextTickIfOpen()
     return this._readableState.push(data)
   }
 
   unshift (data) {
-    this._readableState.updateNextTick()
+    this._readableState.updateNextTickIfOpen()
     return this._readableState.unshift(data)
   }
 
@@ -1137,7 +1142,7 @@ function isReadStreamx (stream) {
 }
 
 function isDisturbed (stream) {
-  return (stream._duplexState & DISTURBED_STATUS) !== OPENING
+  return (stream._duplexState & OPENING) !== OPENING || (stream._duplexState & ACTIVE_OR_TICKING) !== 0
 }
 
 function isTypedArray (data) {
@@ -1163,9 +1168,9 @@ module.exports = {
   pipelinePromise,
   isStream,
   isStreamx,
-  isDisturbed,
   isEnded,
   isFinished,
+  isDisturbed,
   getStreamError,
   Stream,
   Writable,
