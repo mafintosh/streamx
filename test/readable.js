@@ -1,6 +1,6 @@
 const test = require('brittle')
 const b4a = require('b4a')
-const { Readable } = require('../')
+const { Readable, isDisturbed } = require('../')
 
 test('ondata', function (t) {
   t.plan(4)
@@ -72,7 +72,7 @@ test('lazy open', async function (t) {
   })
   await nextImmediate()
   t.absent(opened)
-  r.push(null)
+  r.read()
   await nextImmediate()
   t.ok(opened)
 })
@@ -405,16 +405,16 @@ test('setEncoding empty string', async function (t) {
 
 test('is disturbed', function (t) {
   const r = new Readable()
-  t.is(Readable.isDisturbed(r), false)
+  t.is(isDisturbed(r), false)
 
   r.push('hello')
-  t.is(Readable.isDisturbed(r), false)
+  t.is(isDisturbed(r), false)
 
   r.resume()
-  t.is(Readable.isDisturbed(r), true)
+  t.is(isDisturbed(r), true)
 
   r.pause()
-  t.is(Readable.isDisturbed(r), true)
+  t.is(isDisturbed(r), true)
 })
 
 function nextImmediate () {

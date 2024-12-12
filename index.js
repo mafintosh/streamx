@@ -98,6 +98,7 @@ const READ_READABLE_STATUS = OPEN_STATUS | READ_EMIT_READABLE | READ_QUEUED | RE
 const SHOULD_NOT_READ = OPEN_STATUS | READ_ACTIVE | READ_ENDING | READ_DONE | READ_NEEDS_PUSH | READ_READ_AHEAD
 const READ_BACKPRESSURE_STATUS = DESTROY_STATUS | READ_ENDING | READ_DONE
 const READ_UPDATE_SYNC_STATUS = READ_UPDATING | OPEN_STATUS | READ_NEXT_TICK | READ_PRIMARY
+const READ_NEXT_TICK_OPENING = READ_NEXT_TICK | OPENING
 
 // Combined write state
 const WRITE_PRIMARY_STATUS = OPEN_STATUS | WRITE_FINISHING | WRITE_DONE
@@ -243,7 +244,6 @@ class ReadableState {
     this.highWaterMark = highWaterMark === 0 ? 1 : highWaterMark
     this.buffered = 0
     this.readAhead = highWaterMark > 0
-    this.flowed = false
     this.error = null
     this.pipeline = null
     this.byteLength = byteLengthReadable || byteLength || defaultByteLength
@@ -264,7 +264,6 @@ class ReadableState {
     this.stream._duplexState |= READ_PIPE_DRAINED
     this.pipeTo = pipeTo
     this.pipeline = new Pipeline(this.stream, pipeTo, cb)
-    this.flowed = true
 
     if (cb) this.stream.on('error', noop) // We already error handle this so supress crashes
 
@@ -333,8 +332,6 @@ class ReadableState {
 
   read () {
     const stream = this.stream
-
-    this.flowed = true
 
     if ((stream._duplexState & READ_STATUS) === READ_QUEUED) {
       const data = this.shift()
@@ -419,6 +416,12 @@ class ReadableState {
   updateCallback () {
     if ((this.stream._duplexState & READ_UPDATE_SYNC_STATUS) === READ_PRIMARY) this.update()
     else this.updateNextTick()
+  }
+
+  updateNextTickIfOpen () {
+    if ((this.stream._duplexState & READ_NEXT_TICK_OPENING) === OPENING) return
+    this.stream._duplexState |= READ_NEXT_TICK
+    if ((this.stream._duplexState & READ_UPDATING) === 0) queueTick(this.afterUpdateNextTick)
   }
 
   updateNextTick () {
@@ -601,7 +604,6 @@ function newListener (name) {
   if (this._readableState !== null) {
     if (name === 'data') {
       this._duplexState |= (READ_EMIT_DATA | READ_RESUMED_READ_AHEAD)
-      this._readableState.flowed = true
       this._readableState.updateNextTick()
     }
     if (name === 'readable') {
@@ -733,18 +735,17 @@ class Readable extends Stream {
   }
 
   push (data) {
-    this._readableState.updateNextTick()
+    this._readableState.updateNextTickIfOpen()
     return this._readableState.push(data)
   }
 
   unshift (data) {
-    this._readableState.updateNextTick()
+    this._readableState.updateNextTickIfOpen()
     return this._readableState.unshift(data)
   }
 
   resume () {
     this._duplexState |= READ_RESUMED_READ_AHEAD
-    this._readableState.flowed = true
     this._readableState.updateNextTick()
     return this
   }
@@ -800,10 +801,6 @@ class Readable extends Stream {
 
   static isPaused (rs) {
     return (rs._duplexState & READ_RESUMED) === 0
-  }
-
-  static isDisturbed (rs) {
-    return rs._readableState.flowed === true || (rs._duplexState & DESTROY_STATUS) !== 0
   }
 
   [asyncIterator] () {
@@ -1144,6 +1141,10 @@ function isReadStreamx (stream) {
   return isStreamx(stream) && stream.readable
 }
 
+function isDisturbed (stream) {
+  return (stream._duplexState & OPENING) !== OPENING || (stream._duplexState & ACTIVE_OR_TICKING) !== 0
+}
+
 function isTypedArray (data) {
   return typeof data === 'object' && data !== null && typeof data.byteLength === 'number'
 }
@@ -1169,6 +1170,7 @@ module.exports = {
   isStreamx,
   isEnded,
   isFinished,
+  isDisturbed,
   getStreamError,
   Stream,
   Writable,
