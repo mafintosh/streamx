@@ -744,7 +744,6 @@ class Readable extends Stream {
 
   resume () {
     this._duplexState |= READ_RESUMED_READ_AHEAD
-    this._readableState.flowed = true
     this._readableState.updateNextTick()
     return this
   }

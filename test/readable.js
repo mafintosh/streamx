@@ -404,16 +404,26 @@ test('setEncoding empty string', async function (t) {
 })
 
 test('is disturbed', function (t) {
-  const r = new Readable()
+  let r = new Readable()
   t.is(Readable.isDisturbed(r), false)
 
   r.push('hello')
   t.is(Readable.isDisturbed(r), false)
 
   r.resume()
-  t.is(Readable.isDisturbed(r), true)
+  t.is(Readable.isDisturbed(r), false)
 
   r.pause()
+  t.is(Readable.isDisturbed(r), false)
+
+  r.read()
+  t.is(Readable.isDisturbed(r), true)
+
+  r = new Readable()
+  r.push('hello')
+  t.is(Readable.isDisturbed(r), false)
+
+  r.on('data', () => {})
   t.is(Readable.isDisturbed(r), true)
 })
 
