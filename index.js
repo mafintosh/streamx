@@ -419,7 +419,7 @@ class ReadableState {
   }
 
   updateNextTickIfOpen () {
-    if ((this.stream._duplexState & READ_NEXT_TICK_OPENING) === OPENING) return
+    if ((this.stream._duplexState & READ_NEXT_TICK_OPENING) !== 0) return
     this.stream._duplexState |= READ_NEXT_TICK
     if ((this.stream._duplexState & READ_UPDATING) === 0) queueTick(this.afterUpdateNextTick)
   }
