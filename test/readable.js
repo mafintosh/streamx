@@ -412,6 +412,9 @@ test('is disturbed', function (t) {
 
   r.resume()
   t.is(Readable.isDisturbed(r), true)
+
+  r.pause()
+  t.is(Readable.isDisturbed(r), true)
 })
 
 function nextImmediate () {

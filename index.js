@@ -112,8 +112,6 @@ const WRITE_BACKPRESSURE_STATUS = WRITE_UNDRAINED | DESTROY_STATUS | WRITE_FINIS
 const WRITE_UPDATE_SYNC_STATUS = WRITE_UPDATING | OPEN_STATUS | WRITE_NEXT_TICK | WRITE_PRIMARY
 const WRITE_DROP_DATA = WRITE_FINISHING | WRITE_DONE | DESTROY_STATUS
 
-const READABLE_DISTURBED_STATUS = DESTROY_STATUS | READ_FLOWING
-
 const asyncIterator = Symbol.asyncIterator || Symbol('asyncIterator')
 
 class WritableState {
@@ -245,6 +243,7 @@ class ReadableState {
     this.highWaterMark = highWaterMark === 0 ? 1 : highWaterMark
     this.buffered = 0
     this.readAhead = highWaterMark > 0
+    this.flowed = false
     this.error = null
     this.pipeline = null
     this.byteLength = byteLengthReadable || byteLength || defaultByteLength
@@ -265,6 +264,7 @@ class ReadableState {
     this.stream._duplexState |= READ_PIPE_DRAINED
     this.pipeTo = pipeTo
     this.pipeline = new Pipeline(this.stream, pipeTo, cb)
+    this.flowed = true
 
     if (cb) this.stream.on('error', noop) // We already error handle this so supress crashes
 
@@ -333,6 +333,8 @@ class ReadableState {
 
   read () {
     const stream = this.stream
+
+    this.flowed = true
 
     if ((stream._duplexState & READ_STATUS) === READ_QUEUED) {
       const data = this.shift()
@@ -599,6 +601,7 @@ function newListener (name) {
   if (this._readableState !== null) {
     if (name === 'data') {
       this._duplexState |= (READ_EMIT_DATA | READ_RESUMED_READ_AHEAD)
+      this._readableState.flowed = true
       this._readableState.updateNextTick()
     }
     if (name === 'readable') {
@@ -741,6 +744,7 @@ class Readable extends Stream {
 
   resume () {
     this._duplexState |= READ_RESUMED_READ_AHEAD
+    this._readableState.flowed = true
     this._readableState.updateNextTick()
     return this
   }
@@ -799,7 +803,7 @@ class Readable extends Stream {
   }
 
   static isDisturbed (rs) {
-    return (rs._duplexState & READABLE_DISTURBED_STATUS) !== 0
+    return rs._readableState.flowed === true || (rs._duplexState & DESTROY_STATUS) !== 0
   }
 
   [asyncIterator] () {
