@@ -1,5 +1,4 @@
 const test = require('brittle')
-const tick = require('queue-tick')
 const { Writable, Duplex } = require('../')
 
 test('opens before writes', function (t) {
@@ -156,9 +155,9 @@ test('many ends', function (t) {
   })
 
   s.end()
-  tick(() => {
+  queueMicrotask(() => {
     s.end()
-    tick(() => {
+    queueMicrotask(() => {
       s.end()
     })
   })
