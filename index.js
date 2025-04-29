@@ -585,13 +585,8 @@ function afterOpen (err) {
 
   stream._duplexState &= NOT_ACTIVE
 
-  if (stream._writableState !== null) {
-    stream._writableState.updateCallback()
-  }
-
-  if (stream._readableState !== null) {
-    stream._readableState.updateCallback()
-  }
+    stream._writableState?.updateCallback()
+    stream._readableState?.updateCallback()
 }
 
 function afterTransform (err, data) {
@@ -685,8 +680,8 @@ class Stream extends EventEmitter {
       this._predestroy()
       this._duplexState &= NOT_PREDESTROYING
 
-      if (this._readableState !== null) this._readableState.updateNextTick()
-      if (this._writableState !== null) this._writableState.updateNextTick()
+      this._readableState?.updateNextTick()
+      this._writableState?.updateNextTick()
     }
   }
 }
@@ -750,7 +745,7 @@ class Readable extends Stream {
   }
 
   pause () {
-    this._duplexState &= (this._readableState.readAhead === false ? READ_PAUSED_NO_READ_AHEAD : READ_PAUSED)
+    this._duplexState &= (!this._readableState.readAhead ? READ_PAUSED_NO_READ_AHEAD : READ_PAUSED)
     return this
   }
 
@@ -1071,7 +1066,7 @@ function pipeline (stream, ...streams) {
   if (done) {
     let fin = false
 
-    const autoDestroy = isStreamx(dest) || !!(dest._writableState && dest._writableState.autoDestroy)
+    const autoDestroy = isStreamx(dest) || !!(dest._writableState?.autoDestroy)
 
     dest.on('error', (err) => {
       if (error === null) error = err
@@ -1094,8 +1089,8 @@ function pipeline (stream, ...streams) {
     s.on('close', onclose)
 
     function onclose () {
-      if (rd && s._readableState && !s._readableState.ended) return onerror(PREMATURE_CLOSE)
-      if (wr && s._writableState && !s._writableState.ended) return onerror(PREMATURE_CLOSE)
+      if (rd && !s._readableState?.ended) return onerror(PREMATURE_CLOSE)
+      if (wr && !s._writableState?.ended) return onerror(PREMATURE_CLOSE)
     }
   }
 
@@ -1126,7 +1121,7 @@ function isEnded (stream) {
 }
 
 function isFinished (stream) {
-  return !!stream._writableState && stream._writableState.ended
+  return !stream._writableState?.ended
 }
 
 function getStreamError (stream, opts = {}) {
