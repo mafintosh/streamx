@@ -320,13 +320,14 @@ class ReadableState {
     const pending = [this.map !== null ? this.map(data) : data]
     while (this.buffered > 0) pending.push(this.shift())
 
-    for (let i = 0; i < pending.length - 1; i++) {
+    const len = pending.length - 1
+    for (let i = 0; i < len; i++) {
       const data = pending[i]
       this.buffered += this.byteLength(data)
       this.queue.push(data)
     }
 
-    this.push(pending[pending.length - 1])
+    this.push(pending[len])
   }
 
   read () {
@@ -1050,7 +1051,7 @@ function pipeline (stream, ...streams) {
   let dest = null
   let error = null
 
-  for (let i = 1; i < all.length; i++) {
+  for (let i = 1, len = all.length; i < len; i++) {
     dest = all[i]
 
     if (isStreamx(src)) {
