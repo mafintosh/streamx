@@ -184,9 +184,8 @@ class WritableState {
 
     do {
       while ((stream._duplexState & WRITE_STATUS) === WRITE_QUEUED) {
-        const data = this.shift()
         stream._duplexState |= WRITE_ACTIVE_AND_WRITING
-        stream._write(data, this.afterWrite)
+        stream._write(this.shift(), this.afterWrite)
       }
 
       if ((stream._duplexState & WRITE_PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
@@ -271,10 +270,8 @@ class ReadableState {
       if (cb) pipeTo.on('error', noop) // We already error handle this so supress crashes
       pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline)) // TODO: just call finished from pipeTo itself
     } else {
-      const onerror = this.pipeline.done.bind(this.pipeline, pipeTo)
-      const onclose = this.pipeline.done.bind(this.pipeline, pipeTo, null) // onclose has a weird bool arg
-      pipeTo.on('error', onerror)
-      pipeTo.on('close', onclose)
+      pipeTo.on('error',  this.pipeline.done.bind(this.pipeline, pipeTo))
+      pipeTo.on('close',  this.pipeline.done.bind(this.pipeline, pipeTo, null)) // onclose has a weird bool arg
       pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline))
     }
 
@@ -648,11 +645,11 @@ class Stream extends EventEmitter {
   }
 
   get readable () {
-    return this._readableState !== null ? true : undefined
+    return !!this._readableState
   }
 
   get writable () {
-    return this._writableState !== null ? true : undefined
+    return !!this._writableState
   }
 
   get destroyed () {
@@ -668,11 +665,11 @@ class Stream extends EventEmitter {
       if (!err) err = STREAM_DESTROYED
       this._duplexState = (this._duplexState | DESTROYING) & NON_PRIMARY
 
-      if (this._readableState !== null) {
+      if (this._readableState) {
         this._readableState.highWaterMark = 0
         this._readableState.error = err
       }
-      if (this._writableState !== null) {
+      if (this._writableState) {
         this._writableState.highWaterMark = 0
         this._writableState.error = err
       }
