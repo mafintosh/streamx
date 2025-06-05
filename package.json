@@ -26,7 +26,8 @@
     }
   },
   "scripts": {
-    "test": "standard && brittle test/*.js"
+    "test": "standard && node test/all.js",
+    "test:bare": "standard && bare test/all.js"
   },
   "repository": {
     "type": "git",

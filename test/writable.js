@@ -284,8 +284,13 @@ test('drained helper, inflight write', async function (t) {
 
 test('drained helper, writev', async function (t) {
   let writing = 0
+  let continueWrite
+
+  const wrote = new Promise((resolve) => { continueWrite = resolve })
+
   const w = new Writable({
     writev (datas, cb) {
+      continueWrite()
       setImmediate(() => {
         writing -= datas.length
         cb()
@@ -300,7 +305,7 @@ test('drained helper, writev', async function (t) {
 
   w.end()
 
-  await new Promise(resolve => setImmediate(resolve))
+  await wrote
   t.ok(writing > 0, 'is writing')
   await Writable.drained(w)
   t.ok(writing === 0, 'not writing')

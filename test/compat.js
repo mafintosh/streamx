@@ -1,7 +1,7 @@
-const eos = require('end-of-stream')
+const eos = global.Bare ? null : require('end-of-stream')
 const test = require('brittle')
 const stream = require('../')
-const finished = require('stream').finished
+const finished = global.Bare ? null : require('stream').finished
 
 run(eos)
 run(finished)

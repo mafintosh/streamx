@@ -1,8 +1,8 @@
 const test = require('brittle')
-const compat = require('stream')
+const compat = global.Bare ? null : require('stream')
 const { Readable, Writable } = require('../')
 
-test('pipe to node stream', function (t) {
+test('pipe to node stream', { skip: !compat }, function (t) {
   t.plan(3)
 
   const expected = [
@@ -70,7 +70,7 @@ test('pipe with callback - error case with destroy', function (t) {
   r.push('world')
 })
 
-test('pipe with callback - error case node stream', function (t) {
+test('pipe with callback - error case node stream', { skip: !compat }, function (t) {
   t.plan(2)
 
   const r = new Readable()

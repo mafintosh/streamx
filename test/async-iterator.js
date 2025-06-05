@@ -135,7 +135,7 @@ test('cleaning up a closed iterator', async function (t) {
   await fn()
 })
 
-test('using abort controller', async function (t) {
+test('using abort controller', { skip: !!global.Bare }, async function (t) {
   function createInfinite (signal) {
     let count = 0
     const r = new Readable({ signal })
