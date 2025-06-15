@@ -187,9 +187,8 @@ class WritableState {
 
     do {
       while ((stream._duplexState & WRITE_STATUS) === WRITE_QUEUED) {
-        const data = this.shift()
         stream._duplexState |= WRITE_ACTIVE_AND_WRITING
-        stream._write(data, this.afterWrite)
+        stream._write(this.shift(), this.afterWrite)
       }
 
       if ((stream._duplexState & WRITE_PRIMARY_AND_ACTIVE) === 0) this.updateNonPrimary()
@@ -274,10 +273,8 @@ class ReadableState {
       if (cb) pipeTo.on('error', noop) // We already error handle this so supress crashes
       pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline)) // TODO: just call finished from pipeTo itself
     } else {
-      const onerror = this.pipeline.done.bind(this.pipeline, pipeTo)
-      const onclose = this.pipeline.done.bind(this.pipeline, pipeTo, null) // onclose has a weird bool arg
-      pipeTo.on('error', onerror)
-      pipeTo.on('close', onclose)
+      pipeTo.on('error',  this.pipeline.done.bind(this.pipeline, pipeTo))
+      pipeTo.on('close',  this.pipeline.done.bind(this.pipeline, pipeTo, null)) // onclose has a weird bool arg
       pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline))
     }
 
@@ -323,13 +320,14 @@ class ReadableState {
     const pending = [this.map !== null ? this.map(data) : data]
     while (this.buffered > 0) pending.push(this.shift())
 
-    for (let i = 0; i < pending.length - 1; i++) {
+    const len = pending.length - 1
+    for (let i = 0; i < len; i++) {
       const data = pending[i]
       this.buffered += this.byteLength(data)
       this.queue.push(data)
     }
 
-    this.push(pending[pending.length - 1])
+    this.push(pending[len])
   }
 
   read () {
@@ -588,13 +586,8 @@ function afterOpen (err) {
 
   stream._duplexState &= NOT_ACTIVE
 
-  if (stream._writableState !== null) {
-    stream._writableState.updateCallback()
-  }
-
-  if (stream._readableState !== null) {
-    stream._readableState.updateCallback()
-  }
+    stream._writableState?.updateCallback()
+    stream._readableState?.updateCallback()
 }
 
 function afterTransform (err, data) {
@@ -655,11 +648,11 @@ class Stream extends EventEmitter {
   }
 
   get readable () {
-    return this._readableState !== null ? true : undefined
+    return !!this._readableState
   }
 
   get writable () {
-    return this._writableState !== null ? true : undefined
+    return !!this._writableState
   }
 
   get destroyed () {
@@ -675,11 +668,11 @@ class Stream extends EventEmitter {
       if (!err) err = STREAM_DESTROYED
       this._duplexState = (this._duplexState | DESTROYING) & NON_PRIMARY
 
-      if (this._readableState !== null) {
+      if (this._readableState) {
         this._readableState.highWaterMark = 0
         this._readableState.error = err
       }
-      if (this._writableState !== null) {
+      if (this._writableState) {
         this._writableState.highWaterMark = 0
         this._writableState.error = err
       }
@@ -688,8 +681,8 @@ class Stream extends EventEmitter {
       this._predestroy()
       this._duplexState &= NOT_PREDESTROYING
 
-      if (this._readableState !== null) this._readableState.updateNextTick()
-      if (this._writableState !== null) this._writableState.updateNextTick()
+      this._readableState?.updateNextTick()
+      this._writableState?.updateNextTick()
     }
   }
 }
@@ -753,7 +746,7 @@ class Readable extends Stream {
   }
 
   pause () {
-    this._duplexState &= (this._readableState.readAhead === false ? READ_PAUSED_NO_READ_AHEAD : READ_PAUSED)
+    this._duplexState &= (!this._readableState.readAhead ? READ_PAUSED_NO_READ_AHEAD : READ_PAUSED)
     return this
   }
 
@@ -1058,7 +1051,7 @@ function pipeline (stream, ...streams) {
   let dest = null
   let error = null
 
-  for (let i = 1; i < all.length; i++) {
+  for (let i = 1, len = all.length; i < len; i++) {
     dest = all[i]
 
     if (isStreamx(src)) {
@@ -1074,7 +1067,7 @@ function pipeline (stream, ...streams) {
   if (done) {
     let fin = false
 
-    const autoDestroy = isStreamx(dest) || !!(dest._writableState && dest._writableState.autoDestroy)
+    const autoDestroy = isStreamx(dest) || !!(dest._writableState?.autoDestroy)
 
     dest.on('error', (err) => {
       if (error === null) error = err
@@ -1097,8 +1090,8 @@ function pipeline (stream, ...streams) {
     s.on('close', onclose)
 
     function onclose () {
-      if (rd && s._readableState && !s._readableState.ended) return onerror(PREMATURE_CLOSE)
-      if (wr && s._writableState && !s._writableState.ended) return onerror(PREMATURE_CLOSE)
+      if (rd && !s._readableState?.ended) return onerror(PREMATURE_CLOSE)
+      if (wr && !s._writableState?.ended) return onerror(PREMATURE_CLOSE)
     }
   }
 
@@ -1129,7 +1122,7 @@ function isEnded (stream) {
 }
 
 function isFinished (stream) {
-  return !!stream._writableState && stream._writableState.ended
+  return !stream._writableState?.ended
 }
 
 function getStreamError (stream, opts = {}) {
