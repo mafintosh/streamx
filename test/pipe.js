@@ -171,3 +171,103 @@ test('pipe continues if read is "blocked"', function (t) {
     t.is(written, read)
   }
 })
+
+test('unpipe from streamx where dest not null', (t) => {
+  t.plan(5)
+
+  const expected = [
+    'hi'
+  ]
+
+  const r = new Readable()
+  const w = new Writable({
+    write (data, cb) {
+      t.is(data, expected.shift())
+      r.unpipe(w)
+      t.ok(Readable.isPaused(r))
+      r.push('ho')
+      setTimeout(() => done(), 1)
+      cb(null)
+    }
+  })
+
+  r.pipe(w)
+  r.push('hi')
+
+  function done () {
+    r.destroy()
+
+    setTimeout(() => {
+      t.is(expected.length, 0)
+      t.ok(r.destroyed)
+      t.absent(w.destroyed)
+    }, 1)
+  }
+})
+
+test('unpipe from node stream where dest not null', (t) => {
+  t.plan(5)
+
+  const expected = [
+    'hi'
+  ]
+
+  const r = new Readable()
+  const w = new compat.Writable({
+    objectMode: true,
+    write (data, _, cb) {
+      t.is(data, expected.shift())
+      r.unpipe(w)
+      t.ok(Readable.isPaused(r))
+      r.push('ho')
+      setTimeout(() => done(), 1)
+      cb(null)
+    }
+  })
+
+  r.pipe(w)
+  r.push('hi')
+
+  function done () {
+    r.destroy()
+
+    setTimeout(() => {
+      t.is(expected.length, 0)
+      t.ok(r.destroyed)
+      t.absent(w.destroyed)
+    }, 1)
+  }
+})
+
+test('unpipe from streamx where dest is null', (t) => {
+  t.plan(5)
+
+  const expected = [
+    'hi'
+  ]
+
+  const r = new Readable()
+  const w = new Writable({
+    write (data, cb) {
+      t.is(data, expected.shift())
+      r.unpipe()
+      t.ok(Readable.isPaused(r))
+      r.push('ho')
+      setTimeout(() => done(), 1)
+      cb(null)
+    }
+  })
+
+  r.pipe(w)
+  r.push('hi')
+
+  function done () {
+    r.destroy()
+
+    setTimeout(() => {
+      t.is(expected.length, 0)
+      t.ok(r.destroyed)
+      t.absent(w.destroyed)
+    }, 1)
+  }
+})
