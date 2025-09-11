@@ -22,6 +22,7 @@
   "imports": {
     "events": {
       "bare": "bare-events",
+      "react-native": "bare-events",
       "default": "events"
     }
   },
