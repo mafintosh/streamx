@@ -11,8 +11,6 @@ const qmt =
     ? (fn) => global.process.nextTick(fn)
     : queueMicrotask
 
-/* eslint-disable no-multi-spaces */
-
 // 29 bits used total (4 from shared, 14 from read, and 11 from write)
 const MAX = (1 << 29) - 1
 
