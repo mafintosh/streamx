@@ -7,10 +7,10 @@ test('destroy is never sync', function (t) {
   let openCb = null
 
   const s = new Duplex({
-    open (cb) {
+    open(cb) {
       openCb = cb
     },
-    predestroy () {
+    predestroy() {
       openCb(new Error('stop'))
     }
   })

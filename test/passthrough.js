@@ -1,13 +1,13 @@
 const test = require('brittle')
 const { PassThrough, Writable, Readable } = require('../')
 
-test('passthrough', t => {
+test('passthrough', (t) => {
   t.plan(3)
 
   let i = 0
   const p = new PassThrough()
   const w = new Writable({
-    write (data, cb) {
+    write(data, cb) {
       i++
       if (i === 1) t.is(data, 'foo')
       else if (i === 2) t.is(data, 'bar')

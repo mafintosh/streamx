@@ -5,15 +5,12 @@ const { Readable, Writable } = require('../')
 test('pipe to node stream', { skip: !compat }, function (t) {
   t.plan(3)
 
-  const expected = [
-    'hi',
-    'ho'
-  ]
+  const expected = ['hi', 'ho']
 
   const r = new Readable()
   const w = new compat.Writable({
     objectMode: true,
-    write (data, enc, cb) {
+    write(data, enc, cb) {
       t.is(data, expected.shift())
       cb(null)
     }
@@ -35,7 +32,7 @@ test('pipe with callback - error case', function (t) {
 
   const r = new Readable()
   const w = new Writable({
-    write (data, cb) {
+    write(data, cb) {
       cb(new Error('blerg'))
     }
   })
@@ -55,7 +52,7 @@ test('pipe with callback - error case with destroy', function (t) {
 
   const r = new Readable()
   const w = new Writable({
-    write (data, cb) {
+    write(data, cb) {
       w.destroy(new Error('blerg'))
       cb(null)
     }
@@ -70,25 +67,29 @@ test('pipe with callback - error case with destroy', function (t) {
   r.push('world')
 })
 
-test('pipe with callback - error case node stream', { skip: !compat }, function (t) {
-  t.plan(2)
+test(
+  'pipe with callback - error case node stream',
+  { skip: !compat },
+  function (t) {
+    t.plan(2)
 
-  const r = new Readable()
-  const w = new compat.Writable({
-    write (data, enc, cb) {
-      cb(new Error('blerg'))
-    }
-  })
+    const r = new Readable()
+    const w = new compat.Writable({
+      write(data, enc, cb) {
+        cb(new Error('blerg'))
+      }
+    })
 
-  r.pipe(w, function (err) {
-    t.pass('callback called')
-    t.alike(err, new Error('blerg'))
-  })
+    r.pipe(w, function (err) {
+      t.pass('callback called')
+      t.alike(err, new Error('blerg'))
+    })
 
-  r.push('hello')
-  r.push('world')
-  r.push(null)
-})
+    r.push('hello')
+    r.push('world')
+    r.push(null)
+  }
+)
 
 test('simple pipe', function (t) {
   t.plan(2)
@@ -97,12 +98,12 @@ test('simple pipe', function (t) {
 
   const r = new Readable()
   const w = new Writable({
-    write (data, cb) {
+    write(data, cb) {
       buffered.push(data)
       cb(null)
     },
 
-    final () {
+    final() {
       t.pass('final called')
       t.alike(buffered, ['hello', 'world'])
     }
@@ -122,7 +123,7 @@ test('pipe with callback', function (t) {
 
   const r = new Readable()
   const w = new Writable({
-    write (data, cb) {
+    write(data, cb) {
       buffered.push(data)
       cb(null)
     }
@@ -146,7 +147,7 @@ test('pipe continues if read is "blocked"', function (t) {
   let read = 0
 
   const r = new Readable({
-    read (cb) {
+    read(cb) {
       this.push('test')
 
       if (++read === 20) {
@@ -159,7 +160,7 @@ test('pipe continues if read is "blocked"', function (t) {
   })
 
   const w = new Writable({
-    write (data, cb) {
+    write(data, cb) {
       written++
       cb(null)
     }
@@ -167,7 +168,7 @@ test('pipe continues if read is "blocked"', function (t) {
 
   r.pipe(w)
 
-  function done () {
+  function done() {
     t.is(written, read)
   }
 })

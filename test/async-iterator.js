@@ -6,7 +6,7 @@ test('streams are async iterators', async function (t) {
   const expected = data.slice(0)
 
   const r = new Readable({
-    read (cb) {
+    read(cb) {
       this.push(data.shift())
       cb(null)
     }
@@ -21,11 +21,11 @@ test('streams are async iterators', async function (t) {
 
 test('break out of iterator', async function (t) {
   const r = new Readable({
-    read (cb) {
+    read(cb) {
       this.push('tick')
       cb(null)
     },
-    destroy (cb) {
+    destroy(cb) {
       t.pass('destroying')
       cb(null)
     }
@@ -41,11 +41,11 @@ test('break out of iterator', async function (t) {
 
 test('throw out of iterator', async function (t) {
   const r = new Readable({
-    read (cb) {
+    read(cb) {
       this.push('tick')
       cb(null)
     },
-    destroy (cb) {
+    destroy(cb) {
       t.pass('destroying')
       cb(null)
     }
@@ -63,7 +63,7 @@ test('throw out of iterator', async function (t) {
 
 test('intertesting timing', async function (t) {
   const r = new Readable({
-    read (cb) {
+    read(cb) {
       setImmediate(() => {
         this.push('b')
         this.push('c')
@@ -71,7 +71,7 @@ test('intertesting timing', async function (t) {
         cb(null)
       })
     },
-    destroy (cb) {
+    destroy(cb) {
       t.pass('destroying')
       cb(null)
     }
@@ -83,7 +83,7 @@ test('intertesting timing', async function (t) {
 
   for await (const chunk of r) {
     iterated.push(chunk)
-    await new Promise(resolve => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 10))
   }
 
   t.alike(iterated, ['a', 'b', 'c'])
@@ -93,13 +93,13 @@ test('intertesting timing with close', async function (t) {
   t.plan(3)
 
   const r = new Readable({
-    read (cb) {
+    read(cb) {
       setImmediate(() => {
         this.destroy(new Error('stop'))
         cb(null)
       })
     },
-    destroy (cb) {
+    destroy(cb) {
       t.pass('destroying')
       cb(null)
     }
@@ -112,7 +112,7 @@ test('intertesting timing with close', async function (t) {
   await t.exception(async function () {
     for await (const chunk of r) {
       iterated.push(chunk)
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
     }
   })
 
@@ -125,9 +125,10 @@ test('cleaning up a closed iterator', async function (t) {
   t.plan(1)
 
   const fn = async () => {
-    for await (const chunk of r) { // eslint-disable-line
+    for await (const chunk of r) {
+      // eslint-disable-line
       r.destroy()
-      await new Promise(resolve => r.once('close', resolve))
+      await new Promise((resolve) => r.once('close', resolve))
       t.is(chunk, 'a')
       return
     }
@@ -136,7 +137,7 @@ test('cleaning up a closed iterator', async function (t) {
 })
 
 test('using abort controller', { skip: !!global.Bare }, async function (t) {
-  function createInfinite (signal) {
+  function createInfinite(signal) {
     let count = 0
     const r = new Readable({ signal })
     r.push(count)
@@ -160,10 +161,12 @@ test('using abort controller', { skip: !!global.Bare }, async function (t) {
 test('from async iterator and to async iterator', async function (t) {
   const expected = []
 
-  const stream = Readable.from(async function * () {
-    yield 'a'
-    yield 'b'
-  }())
+  const stream = Readable.from(
+    (async function* () {
+      yield 'a'
+      yield 'b'
+    })()
+  )
 
   for await (const data of stream) {
     expected.push(data)

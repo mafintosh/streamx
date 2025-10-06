@@ -2,14 +2,14 @@ const fs = require('fs')
 const { Writable, Readable } = require('../')
 
 class FileWriteStream extends Writable {
-  constructor (filename, mode) {
+  constructor(filename, mode) {
     super()
     this.filename = filename
     this.mode = mode
     this.fd = 0
   }
 
-  _open (cb) {
+  _open(cb) {
     fs.open(this.filename, this.mode, (err, fd) => {
       if (err) return cb(err)
       this.fd = fd
@@ -17,7 +17,7 @@ class FileWriteStream extends Writable {
     })
   }
 
-  _write (data, cb) {
+  _write(data, cb) {
     fs.write(this.fd, data, 0, data.length, null, (err, written) => {
       if (err) return cb(err)
       if (written !== data.length) return this._write(data.slice(written), cb)
@@ -25,20 +25,20 @@ class FileWriteStream extends Writable {
     })
   }
 
-  _destroy (cb) {
+  _destroy(cb) {
     if (!this.fd) return cb()
     fs.close(this.fd, cb)
   }
 }
 
 class FileReadStream extends Readable {
-  constructor (filename) {
+  constructor(filename) {
     super()
     this.filename = filename
     this.fd = 0
   }
 
-  _open (cb) {
+  _open(cb) {
     fs.open(this.filename, 'r', (err, fd) => {
       if (err) return cb(err)
       this.fd = fd
@@ -46,7 +46,7 @@ class FileReadStream extends Readable {
     })
   }
 
-  _read (cb) {
+  _read(cb) {
     let data = Buffer.alloc(16 * 1024)
 
     fs.read(this.fd, data, 0, data.length, null, (err, read) => {
@@ -57,7 +57,7 @@ class FileReadStream extends Readable {
     })
   }
 
-  _destroy (cb) {
+  _destroy(cb) {
     if (!this.fd) return cb()
     fs.close(this.fd, cb)
   }

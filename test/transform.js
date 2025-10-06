@@ -3,7 +3,7 @@ const { Transform } = require('../')
 
 test('default transform teardown when saturated', async function (t) {
   const stream = new Transform({
-    transform (data, cb) {
+    transform(data, cb) {
       cb(null, data)
     }
   })
@@ -12,11 +12,11 @@ test('default transform teardown when saturated', async function (t) {
     stream.write('hello')
   }
 
-  await new Promise(resolve => setImmediate(resolve))
+  await new Promise((resolve) => setImmediate(resolve))
 
   stream.destroy()
 
-  await new Promise(resolve => stream.on('close', resolve))
+  await new Promise((resolve) => stream.on('close', resolve))
 
   t.pass('close fired')
 })

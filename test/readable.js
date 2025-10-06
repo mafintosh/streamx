@@ -13,7 +13,7 @@ test('ondata', function (t) {
   r.push('world')
   r.push(null)
 
-  r.on('data', data => buffered.push(data))
+  r.on('data', (data) => buffered.push(data))
   r.on('end', () => ended++)
   r.on('close', function () {
     t.pass('closed')
@@ -27,7 +27,7 @@ test('pause', async function (t) {
   const r = new Readable()
   const buffered = []
   t.is(Readable.isPaused(r), true, 'starting off paused')
-  r.on('data', data => buffered.push(data))
+  r.on('data', (data) => buffered.push(data))
   r.on('close', () => t.end())
   r.push('hello')
   await nextImmediate()
@@ -65,7 +65,7 @@ test('resume', function (t) {
 test('lazy open', async function (t) {
   let opened = false
   const r = new Readable({
-    open (cb) {
+    open(cb) {
       opened = true
       cb(null)
     }
@@ -80,7 +80,7 @@ test('lazy open', async function (t) {
 test('eager open', async function (t) {
   let opened = false
   const r = new Readable({
-    open (cb) {
+    open(cb) {
       opened = true
       cb(null)
     },
@@ -95,11 +95,11 @@ test('shorthands', function (t) {
   t.plan(3)
 
   const r = new Readable({
-    read (cb) {
+    read(cb) {
       this.push('hello')
       cb(null)
     },
-    destroy (cb) {
+    destroy(cb) {
       t.pass('destroyed')
       cb(null)
     }
@@ -118,7 +118,7 @@ test('both push and the cb needs to be called for re-reads', function (t) {
   let once = true
 
   const r = new Readable({
-    read (cb) {
+    read(cb) {
       t.ok(once, 'read called once')
       once = false
       cb(null)
@@ -138,7 +138,7 @@ test('from array', function (t) {
 
   const inc = []
   const r = Readable.from([1, 2, 3])
-  r.on('data', data => inc.push(data))
+  r.on('data', (data) => inc.push(data))
   r.on('end', function () {
     t.alike(inc, [1, 2, 3])
   })
@@ -149,7 +149,7 @@ test('from buffer', function (t) {
 
   const inc = []
   const r = Readable.from(Buffer.from('hello'))
-  r.on('data', data => inc.push(data))
+  r.on('data', (data) => inc.push(data))
   r.on('end', function () {
     t.alike(inc, [Buffer.from('hello')])
   })
@@ -158,7 +158,7 @@ test('from buffer', function (t) {
 test('from async iterator', function (t) {
   t.plan(1)
 
-  async function * test () {
+  async function* test() {
     yield 1
     yield 2
     yield 3
@@ -166,7 +166,7 @@ test('from async iterator', function (t) {
 
   const inc = []
   const r = Readable.from(test())
-  r.on('data', data => inc.push(data))
+  r.on('data', (data) => inc.push(data))
   r.on('end', function () {
     t.alike(inc, [1, 2, 3])
   })
@@ -178,7 +178,7 @@ test('from array with highWaterMark', function (t) {
 })
 
 test('from async iterator with highWaterMark', function (t) {
-  async function * test () {
+  async function* test() {
     yield 1
   }
 
@@ -207,10 +207,11 @@ test('from readable should return the original readable', function (t) {
 
 test('map readable data', async function (t) {
   const r = new Readable({
-    map: input => JSON.parse(input)
+    map: (input) => JSON.parse(input)
   })
   r.push('{ "foo": 1 }')
-  for await (const obj of r) { // eslint-disable-line
+  for await (const obj of r) {
+    // eslint-disable-line
     t.alike(obj, { foo: 1 })
     break
   }
@@ -219,10 +220,11 @@ test('map readable data', async function (t) {
 test('use mapReadable to map data', async function (t) {
   const r = new Readable({
     map: () => t.fail('.mapReadable has priority'),
-    mapReadable: input => JSON.parse(input)
+    mapReadable: (input) => JSON.parse(input)
   })
   r.push('{ "foo": 1 }')
-  for await (const obj of r) { // eslint-disable-line
+  for await (const obj of r) {
+    // eslint-disable-line
     t.alike(obj, { foo: 1 })
     break
   }
@@ -232,7 +234,7 @@ test('live stream', function (t) {
   t.plan(3)
 
   const r = new Readable({
-    read (cb) {
+    read(cb) {
       this.push('data')
       this.push('data')
       this.push('data')
@@ -249,7 +251,7 @@ test('live stream with readable', function (t) {
   t.plan(3)
 
   const r = new Readable({
-    read (cb) {
+    read(cb) {
       this.push('data')
       this.push('data')
       this.push('data')
@@ -270,7 +272,7 @@ test('resume a stalled stream', function (t) {
   let once = true
 
   const r = new Readable({
-    read (cb) {
+    read(cb) {
       if (once) {
         once = false
         this.push('data')
@@ -311,8 +313,8 @@ test('no read-ahead with pause/resume', function (t) {
 
   const r = new Readable({
     highWaterMark: 0,
-    read (cb) {
-      this.push('tick: ' + (++tick))
+    read(cb) {
+      this.push('tick: ' + ++tick)
       cb()
     }
   })
@@ -339,8 +341,8 @@ test('no read-ahead with async iterator', async function (t) {
 
   const r = new Readable({
     highWaterMark: 0,
-    read (cb) {
-      this.push('tick: ' + (++tick))
+    read(cb) {
+      this.push('tick: ' + ++tick)
       if (tick === 10) this.push(null)
       cb()
     }
@@ -377,7 +379,7 @@ test('setEncoding respects existing map', async function (t) {
 
   const r = new Readable({
     encoding: 'utf-8',
-    map (data) {
+    map(data) {
       return JSON.parse(data)
     }
   })
@@ -417,6 +419,6 @@ test('is disturbed', function (t) {
   t.is(isDisturbed(r), true)
 })
 
-function nextImmediate () {
-  return new Promise(resolve => setImmediate(resolve))
+function nextImmediate() {
+  return new Promise((resolve) => setImmediate(resolve))
 }

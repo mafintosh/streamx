@@ -6,7 +6,7 @@ const finished = global.Bare ? null : require('stream').finished
 run(eos)
 run(finished)
 
-function run (eos) {
+function run(eos) {
   if (!eos) return
   const name = eos === finished ? 'nodeStream.finished' : 'eos'
 
@@ -97,8 +97,12 @@ function run (eos) {
     let ended = false
     let finished = false
 
-    s.on('end', () => { ended = true })
-    s.on('finish', () => { finished = true })
+    s.on('end', () => {
+      ended = true
+    })
+    s.on('finish', () => {
+      finished = true
+    })
 
     eos(s, function (err) {
       t.absent(err, 'no error')
@@ -124,7 +128,9 @@ function run (eos) {
       setImmediate(() => s.end())
     })
 
-    s.on('finish', () => { finished = true })
+    s.on('finish', () => {
+      finished = true
+    })
 
     eos(s, function (err) {
       t.absent(err, 'no error')
@@ -149,7 +155,9 @@ function run (eos) {
       setImmediate(() => s.push(null))
     })
 
-    s.on('end', () => { ended = true })
+    s.on('end', () => {
+      ended = true
+    })
 
     eos(s, function (err) {
       t.absent(err, 'no error')
@@ -169,8 +177,12 @@ function run (eos) {
     let ended = false
     let finished = false
 
-    s.on('end', () => { ended = true })
-    s.on('finish', () => { finished = true })
+    s.on('end', () => {
+      ended = true
+    })
+    s.on('finish', () => {
+      finished = true
+    })
 
     eos(s, function (err) {
       t.ok(err, 'had error')
