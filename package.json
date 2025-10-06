@@ -12,14 +12,17 @@
     "b4a": "^1.6.6",
     "brittle": "^3.1.1",
     "end-of-stream": "^1.4.4",
-    "standard": "^17.0.0"
+    "prettier": "^3.6.2",
+    "prettier-config-holepunch": "^1.0.0"
   },
   "files": [
     "index.js"
   ],
   "scripts": {
-    "test": "standard && node test/all.js",
-    "test:bare": "standard && bare test/all.js"
+    "format": "prettier --write .",
+    "lint": "prettier --check .",
+    "test": "node test/all.js",
+    "test:bare": "bare test/all.js"
   },
   "repository": {
     "type": "git",
