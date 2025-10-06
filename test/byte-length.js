@@ -16,13 +16,7 @@ const defaultSizes = [
   { name: 'uint32-64', item: new Uint32Array(64), size: 256 }
 ]
 
-for (const {
-  name,
-  item,
-  size,
-  byteLength,
-  byteLengthExtended
-} of defaultSizes) {
+for (const { name, item, size, byteLength, byteLengthExtended } of defaultSizes) {
   test(`readable ${name}`, function (t) {
     const r = new Readable({
       byteLength,

@@ -67,29 +67,25 @@ test('pipe with callback - error case with destroy', function (t) {
   r.push('world')
 })
 
-test(
-  'pipe with callback - error case node stream',
-  { skip: !compat },
-  function (t) {
-    t.plan(2)
+test('pipe with callback - error case node stream', { skip: !compat }, function (t) {
+  t.plan(2)
 
-    const r = new Readable()
-    const w = new compat.Writable({
-      write(data, enc, cb) {
-        cb(new Error('blerg'))
-      }
-    })
+  const r = new Readable()
+  const w = new compat.Writable({
+    write(data, enc, cb) {
+      cb(new Error('blerg'))
+    }
+  })
 
-    r.pipe(w, function (err) {
-      t.pass('callback called')
-      t.alike(err, new Error('blerg'))
-    })
+  r.pipe(w, function (err) {
+    t.pass('callback called')
+    t.alike(err, new Error('blerg'))
+  })
 
-    r.push('hello')
-    r.push('world')
-    r.push(null)
-  }
-)
+  r.push('hello')
+  r.push('world')
+  r.push(null)
+})
 
 test('simple pipe', function (t) {
   t.plan(2)

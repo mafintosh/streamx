@@ -1,11 +1,5 @@
 const test = require('brittle')
-const {
-  pipeline,
-  pipelinePromise,
-  Transform,
-  Readable,
-  Writable
-} = require('../')
+const { pipeline, pipelinePromise, Transform, Readable, Writable } = require('../')
 
 test('piping to a writable', function (t) {
   t.plan(2)
