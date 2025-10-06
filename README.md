@@ -22,7 +22,7 @@ This makes it easy to maintain state.
 Fully integrates a `.destroy()` function. When called the stream will wait for any
 pending operation to finish and call the stream destroy logic.
 
-Close is *always* the last event emitted and `destroy` is always run.
+Close is _always_ the last event emitted and `destroy` is always run.
 
 #### `pipe()` error handles
 
@@ -80,17 +80,17 @@ alternative means to `.destroy` streams.
 
 ## Usage
 
-``` js
+```js
 const { Readable } = require('streamx')
 
 const rs = new Readable({
-  read (cb) {
+  read(cb) {
     this.push('Cool data')
     cb(null)
   }
 })
 
-rs.on('data', data => console.log('data:', data))
+rs.on('data', (data) => console.log('data:', data))
 ```
 
 ## API
@@ -474,8 +474,8 @@ Returns `null` if the stream has no errors.
 Streamx aims to be minimal and stable. It therefore only contains a minimal set of utilities.
 To help discover of other modules that help you build streamx apps, we link some useful utilities here
 
-* [stream-composer](https://github.com/mafintosh/stream-composer) - Compose streams like Node's `stream.compose` and the `duplexify` and `pumpify` modules.
-* [teex](https://github.com/mafintosh/teex) - Clone a readable stream into multiple new readable instances.
+- [stream-composer](https://github.com/mafintosh/stream-composer) - Compose streams like Node's `stream.compose` and the `duplexify` and `pumpify` modules.
+- [teex](https://github.com/mafintosh/teex) - Clone a readable stream into multiple new readable instances.
 
 ## Contributing
 

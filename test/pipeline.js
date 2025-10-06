@@ -1,5 +1,11 @@
 const test = require('brittle')
-const { pipeline, pipelinePromise, Transform, Readable, Writable } = require('../')
+const {
+  pipeline,
+  pipelinePromise,
+  Transform,
+  Readable,
+  Writable
+} = require('../')
 
 test('piping to a writable', function (t) {
   t.plan(2)
@@ -7,7 +13,7 @@ test('piping to a writable', function (t) {
   const w = pipeline(
     Readable.from('hello'),
     new Writable({
-      write (data, cb) {
+      write(data, cb) {
         t.is(data, 'hello')
         cb()
       }
@@ -22,13 +28,9 @@ test('piping with error', function (t) {
   const r = new Readable()
   const w = new Writable()
   const err = new Error()
-  pipeline(
-    r,
-    w,
-    (error) => {
-      t.alike(error, err)
-    }
-  )
+  pipeline(r, w, (error) => {
+    t.alike(error, err)
+  })
   r.destroy(err)
 })
 
@@ -38,7 +40,7 @@ test('piping with final callback', function (t) {
   pipeline(
     Readable.from('hello'),
     new Writable({
-      write (data, cb) {
+      write(data, cb) {
         t.is(data, 'hello')
         cb()
       }
@@ -54,13 +56,13 @@ test('piping with transform stream inbetween', function (t) {
     [
       Readable.from('hello'),
       new Transform({
-        transform (input, cb) {
+        transform(input, cb) {
           this.push(input.length)
           cb()
         }
       }),
       new Writable({
-        write (data, cb) {
+        write(data, cb) {
           t.is(data, 5)
           cb()
         }
@@ -76,7 +78,7 @@ test('piping to a writable', function (t) {
   const w = pipeline(
     Readable.from('hello'),
     new Writable({
-      write (data, cb) {
+      write(data, cb) {
         t.is(data, 'hello')
         cb()
       }
@@ -96,7 +98,7 @@ test('piping to a writable + promise', async function (t) {
   await pipelinePromise(
     r,
     new Writable({
-      write (data, cb) {
+      write(data, cb) {
         t.is(data, 'hello')
         cb()
       }

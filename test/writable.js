@@ -6,11 +6,11 @@ test('opens before writes', function (t) {
 
   const trace = []
   const stream = new Writable({
-    open (cb) {
+    open(cb) {
       trace.push('open')
       return cb(null)
     },
-    write (data, cb) {
+    write(data, cb) {
       trace.push('write')
       return cb(null)
     }
@@ -28,7 +28,7 @@ test('drain', function (t) {
 
   const stream = new Writable({
     highWaterMark: 1,
-    write (data, cb) {
+    write(data, cb) {
       cb(null)
     }
   })
@@ -44,7 +44,7 @@ test('drain multi write', function (t) {
 
   const stream = new Writable({
     highWaterMark: 1,
-    write (data, cb) {
+    write(data, cb) {
       cb(null)
     }
   })
@@ -64,7 +64,7 @@ test('drain async write', function (t) {
 
   const stream = new Writable({
     highWaterMark: 1,
-    write (data, cb) {
+    write(data, cb) {
       setImmediate(function () {
         flushed = true
         cb(null)
@@ -85,7 +85,7 @@ test('writev', function (t) {
   const expected = [[], ['ho']]
 
   const s = new Writable({
-    writev (batch, cb) {
+    writev(batch, cb) {
       t.alike(batch, expected.shift())
       cb(null)
     }
@@ -110,11 +110,11 @@ test('map written data', function (t) {
   t.plan(2)
 
   const r = new Writable({
-    write (data, cb) {
+    write(data, cb) {
       t.is(data, '{"foo":1}')
       cb()
     },
-    map: input => JSON.stringify(input)
+    map: (input) => JSON.stringify(input)
   })
   r.on('finish', () => {
     t.pass('finished')
@@ -127,12 +127,12 @@ test('use mapWritable to map data', function (t) {
   t.plan(2)
 
   const r = new Writable({
-    write (data, cb) {
+    write(data, cb) {
       t.is(data, '{"foo":1}')
       cb()
     },
     map: () => t.fail('.mapWritable has priority'),
-    mapWritable: input => JSON.stringify(input)
+    mapWritable: (input) => JSON.stringify(input)
   })
   r.on('finish', () => {
     t.pass('finished')
@@ -148,7 +148,7 @@ test('many ends', function (t) {
   let finish = 0
 
   const s = new Duplex({
-    final (cb) {
+    final(cb) {
       finals++
       cb(null)
     }
@@ -171,7 +171,7 @@ test('many ends', function (t) {
 
 test('drained helper', async function (t) {
   const w = new Writable({
-    write (data, cb) {
+    write(data, cb) {
       setImmediate(cb)
     }
   })
@@ -216,7 +216,7 @@ test('drained helper', async function (t) {
 
 test('drained helper, duplex', async function (t) {
   const w = new Duplex({
-    write (data, cb) {
+    write(data, cb) {
       setImmediate(cb)
     }
   })
@@ -262,7 +262,7 @@ test('drained helper, duplex', async function (t) {
 test('drained helper, inflight write', async function (t) {
   let writing = false
   const w = new Writable({
-    write (data, cb) {
+    write(data, cb) {
       writing = true
       setImmediate(() => {
         setImmediate(() => {
@@ -276,7 +276,7 @@ test('drained helper, inflight write', async function (t) {
   w.write('hello')
   w.end()
 
-  await new Promise(resolve => setImmediate(resolve))
+  await new Promise((resolve) => setImmediate(resolve))
   t.ok(writing, 'is writing')
   await Writable.drained(w)
   t.absent(writing, 'not writing')
@@ -286,10 +286,12 @@ test('drained helper, writev', async function (t) {
   let writing = 0
   let continueWrite
 
-  const wrote = new Promise((resolve) => { continueWrite = resolve })
+  const wrote = new Promise((resolve) => {
+    continueWrite = resolve
+  })
 
   const w = new Writable({
-    writev (datas, cb) {
+    writev(datas, cb) {
       continueWrite()
       setImmediate(() => {
         writing -= datas.length
@@ -313,7 +315,7 @@ test('drained helper, writev', async function (t) {
 
 test('drained helper, writev, already flushed', async function (t) {
   const w = new Writable({
-    writev (datas, cb) {
+    writev(datas, cb) {
       cb()
     }
   })
@@ -324,7 +326,7 @@ test('drained helper, writev, already flushed', async function (t) {
 
 test('can cork and uncork the stream', async function (t) {
   const w = new Writable({
-    writev (batch, cb) {
+    writev(batch, cb) {
       t.alike(batch, [1, 2, 3])
       cb(null)
     }
@@ -341,6 +343,6 @@ test('can cork and uncork the stream', async function (t) {
   await Writable.drained(w)
 })
 
-function eventFlush () {
-  return new Promise(resolve => setImmediate(resolve))
+function eventFlush() {
+  return new Promise((resolve) => setImmediate(resolve))
 }
