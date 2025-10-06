@@ -20,8 +20,7 @@
   ],
   "scripts": {
     "format": "prettier --write .",
-    "lint": "prettier --check .",
-    "test": "node test/all.js",
+    "test": "prettier --check . && node test/all.js",
     "test:bare": "bare test/all.js"
   },
   "repository": {
