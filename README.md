@@ -476,6 +476,7 @@ To help discover of other modules that help you build streamx apps, we link some
 
 - [stream-composer](https://github.com/mafintosh/stream-composer) - Compose streams like Node's `stream.compose` and the `duplexify` and `pumpify` modules.
 - [teex](https://github.com/mafintosh/teex) - Clone a readable stream into multiple new readable instances.
+- [merge-readable](https://github.com/holepunchto/merge-readable) - Merge multiple readers into a new readable with optional mapping of data
 
 ## Contributing
 
