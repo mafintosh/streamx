@@ -1136,6 +1136,48 @@ function pipeline(stream, ...streams) {
   }
 }
 
+function merge(...sources) {
+  const output = new PassThrough()
+
+  let active = sources.length
+
+  if (active === 0) {
+    output.end()
+    return output
+  }
+
+  for (const source of sources) {
+    source.on('data', (data) => {
+      output.write(data)
+    })
+
+    source.on('end', () => {
+      active--
+      if (active === 0) {
+        output.end()
+      }
+    })
+
+    source.on('error', onerror)
+    source.on('close', onclose.bind(null, source))
+  }
+
+  return output
+
+  function onclose(source) {
+    if (source._readableState && !source._readableState.ended) {
+      onerror(PREMATURE_CLOSE)
+    }
+  }
+
+  function onerror(err) {
+    for (const s of sources) {
+      s.destroy(err)
+    }
+    output.destroy(err)
+  }
+}
+
 function echo(s) {
   return s
 }
@@ -1194,6 +1236,7 @@ function isWritev(s) {
 }
 
 module.exports = {
+  merge,
   pipeline,
   pipelinePromise,
   isStream,
