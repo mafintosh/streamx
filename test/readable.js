@@ -419,6 +419,18 @@ test('is disturbed', function (t) {
   t.is(isDisturbed(r), true)
 })
 
+test('is disturbed after immediate destroy', function (t) {
+  t.plan(3)
+
+  const r = new Readable()
+  t.is(isDisturbed(r), false)
+
+  r.destroy()
+  t.is(isDisturbed(r), true)
+
+  r.on('close', () => t.is(isDisturbed(r), true))
+})
+
 function nextImmediate() {
   return new Promise((resolve) => setImmediate(resolve))
 }
