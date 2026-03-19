@@ -1171,7 +1171,9 @@ function isReadStreamx(stream) {
 
 function isDisturbed(stream) {
   return (
-    (stream._duplexState & OPENING) !== OPENING || (stream._duplexState & ACTIVE_OR_TICKING) !== 0
+    (stream._duplexState & OPENING) !== OPENING ||
+    (stream._duplexState & DESTROYING) === DESTROYING ||
+    (stream._duplexState & ACTIVE_OR_TICKING) !== 0
   )
 }
 
