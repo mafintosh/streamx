@@ -135,6 +135,10 @@ class WritableState {
     this.afterUpdateNextTick = updateWriteNT.bind(this)
   }
 
+  get ending() {
+    return (this.stream._duplexState & WRITE_FINISHING) !== 0
+  }
+
   get ended() {
     return (this.stream._duplexState & WRITE_DONE) !== 0
   }
@@ -259,6 +263,10 @@ class ReadableState {
     this.pipeTo = null
     this.afterRead = afterRead.bind(this)
     this.afterUpdateNextTick = updateReadNT.bind(this)
+  }
+
+  get ending() {
+    return (this.stream._duplexState & READ_ENDING) !== 0
   }
 
   get ended() {
@@ -1148,8 +1156,16 @@ function isStreamx(stream) {
   return typeof stream._duplexState === 'number' && isStream(stream)
 }
 
+function isEnding(stream) {
+  return !!stream._readableState && stream._readableState.ending
+}
+
 function isEnded(stream) {
   return !!stream._readableState && stream._readableState.ended
+}
+
+function isFinishing(stream) {
+  return !!stream._writableState && stream._writableState.ending
 }
 
 function isFinished(stream) {
@@ -1200,7 +1216,9 @@ module.exports = {
   pipelinePromise,
   isStream,
   isStreamx,
+  isEnding,
   isEnded,
+  isFinishing,
   isFinished,
   isDisturbed,
   getStreamError,
