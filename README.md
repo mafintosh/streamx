@@ -388,6 +388,10 @@ Emitted when a readable stream is being piped to the writable one.
 
 Emitted after `ws._open(cb)` execution.
 
+#### `ws.on('drain')`
+
+Emitted after all data was drained if `ws.write(data)` returned `false`.
+
 #### `ws.destroyed`
 
 Boolean property indicating wheather or not this stream has been destroyed.
