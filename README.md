@@ -262,6 +262,10 @@ Boolean property indicating whether or not this stream has started to be destroy
 
 Boolean property indicating whether or not this stream has been destroyed.
 
+#### `rs.readable`
+
+Returns `true` if the stream is an active streamx readable stream. Returns `undefined` if not.
+
 #### `bool = Readable.isBackpressured(rs)`
 
 Static method to check if a readable stream is currently under backpressure.
@@ -403,6 +407,10 @@ Boolean property indicating whether or not this stream has started to be destroy
 #### `ws.destroyed`
 
 Boolean property indicating whether or not this stream has been destroyed.
+
+#### `ws.writable`
+
+Returns `true` if the stream is an active streamx writable stream. Returns `undefined` if not.
 
 #### `bool = Writable.isBackpressured(ws)`
 
