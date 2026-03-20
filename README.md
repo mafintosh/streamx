@@ -170,7 +170,7 @@ Can also be set using `options.open` in the constructor.
 This function is called just before the stream is fully destroyed. You should
 use this to implement whatever teardown logic you need. The final part of the
 stream life cycle is always to call destroy itself so this function will always
-be called wheather or not the stream ends gracefully or forcefully.
+be called whether or not the stream ends gracefully or forcefully.
 
 Can also be set using `options.destroy` in the constructor.
 
@@ -310,7 +310,7 @@ Can also be set using `options.open` in the constructor.
 This function is called just before the stream is fully destroyed. You should
 use this to implement whatever teardown logic you need. The final part of the
 stream life cycle is always to call destroy itself so this function will always
-be called wheather or not the stream ends gracefully or forcefully.
+be called whether or not the stream ends gracefully or forcefully.
 
 Can also be set using `options.destroy` in the constructor.
 
