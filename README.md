@@ -505,6 +505,10 @@ promise if you use this version.
 
 #### `bool = isStreamx(stream)`
 
+#### `bool = isDisturbed(stream)`
+
+Indicates if the stream has been opened or started to be destroyed.
+
 #### `err = getStreamError(stream, [options])`
 
 Returns `null` if the stream has no errors.
