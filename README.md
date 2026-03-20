@@ -250,6 +250,10 @@ Emitted if any of the stream operations fail with an error. `close` is always em
 
 Emitted when the readable stream is pipeing to a destination.
 
+#### `rs.on('open')`
+
+Emitted after `rs._open(cb)` execution.
+
 #### `rs.destroyed`
 
 Boolean property indicating wheather or not this stream has been destroyed.
@@ -379,6 +383,10 @@ Emitted if any of the stream operations fail with an error. `close` is always em
 #### `ws.on('pipe', src)`
 
 Emitted when a readable stream is being piped to the writable one.
+
+#### `ws.on('open')`
+
+Emitted after `ws._open(cb)` execution.
 
 #### `ws.destroyed`
 
