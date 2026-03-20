@@ -509,6 +509,14 @@ promise if you use this version.
 
 Indicates if the stream has been opened or started to be destroyed.
 
+#### `bool = isFinishing(stream)`
+
+Indicates if a writable stream has started it's ending process.
+
+#### `bool = isFinished(stream)`
+
+Indicates if a writable stream ended, so all it's writings.
+
 #### `err = getStreamError(stream, [options])`
 
 Returns `null` if the stream has no errors.
