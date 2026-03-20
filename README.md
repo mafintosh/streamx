@@ -254,9 +254,13 @@ Emitted when the readable stream is pipeing to a destination.
 
 Emitted after `rs._open(cb)` execution.
 
+#### `rs.destroying`
+
+Boolean property indicating whether or not this stream has started to be destroyed.
+
 #### `rs.destroyed`
 
-Boolean property indicating wheather or not this stream has been destroyed.
+Boolean property indicating whether or not this stream has been destroyed.
 
 #### `bool = Readable.isBackpressured(rs)`
 
@@ -392,9 +396,13 @@ Emitted after `ws._open(cb)` execution.
 
 Emitted after all data was drained if `ws.write(data)` returned `false`.
 
+#### `ws.destroying`
+
+Boolean property indicating whether or not this stream has started to be destroyed.
+
 #### `ws.destroyed`
 
-Boolean property indicating wheather or not this stream has been destroyed.
+Boolean property indicating whether or not this stream has been destroyed.
 
 #### `bool = Writable.isBackpressured(ws)`
 
