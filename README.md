@@ -345,6 +345,14 @@ Once all writes have been fully drained `finish` will be emitted.
 
 Returns this stream instance.
 
+#### `ws.cork()`
+
+Buffer written data in memory. Useful for accumulating small chunks of data into a batch to be consumed by `writev`.
+
+#### `ws.uncork()`
+
+Disable `ws.cork()`.
+
 #### `ws._final(callback)`
 
 This function is called just before `finish` is emitted, i.e. when all writes have flushed but `ws.end()`
