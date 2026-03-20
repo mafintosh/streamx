@@ -210,6 +210,10 @@ If none of these option are used the stream will stay paused.
 
 Returns this stream instance.
 
+#### `rs.setEncoding(encoding)`
+
+Set an encoding to change how data is interpreted. E.g. `utf-8`.
+
 #### `bool = Readable.isPaused(rs)`
 
 Returns `true` if the stream is paused, else `false`.
