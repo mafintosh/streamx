@@ -168,3 +168,113 @@ test('pipe continues if read is "blocked"', function (t) {
     t.is(written, read)
   }
 })
+
+test('unpipe - from streamx', (t) => {
+  t.plan(4)
+
+  const r = new Readable()
+  const w = new Writable({
+    write(data, cb) {
+      t.is(data, 'hello')
+      cb(null)
+    }
+  })
+
+  r.on('unpiping', (dest) => t.is(dest, w))
+  w.on('unpipe', (src) => t.is(src, r))
+
+  r.pipe(w)
+  r.push('hello')
+
+  setTimeout(() => {
+    r.unpipe(w)
+
+    t.ok(Readable.isPaused(r))
+
+    r.push('world')
+    r.push(null)
+  })
+})
+
+test('unpipe - from streamx - no arguments', (t) => {
+  t.plan(2)
+
+  const r = new Readable()
+  const w = new Writable({
+    write(data, cb) {
+      t.is(data, 'hello')
+      cb(null)
+    }
+  })
+
+  w.on('unpipe', (src) => t.is(src, r))
+
+  r.pipe(w)
+  r.push('hello')
+
+  setTimeout(() => {
+    r.unpipe()
+    r.push('world')
+    r.push(null)
+  })
+})
+
+test('unpipe - from node stream', { skip: !compat }, (t) => {
+  t.plan(3)
+
+  const r = new Readable()
+  const w = new compat.Writable({
+    objectMode: true,
+    write(data, enc, cb) {
+      t.is(data, 'hello')
+      cb(null)
+    }
+  })
+
+  w.on('unpipe', (src) => t.is(src, r))
+
+  r.pipe(w)
+  r.push('hello')
+
+  setTimeout(() => {
+    r.unpipe(w)
+
+    t.ok(Readable.isPaused(r))
+
+    r.push('world')
+    r.push(null)
+  })
+})
+
+test('unpipe + pipe + unpipe', (t) => {
+  t.plan(5)
+
+  const r = new Readable()
+  const w = new Writable({
+    write(data, cb) {
+      t.is(data, 'hello')
+      cb(null)
+    }
+  })
+
+  w.on('unpipe', (src) => t.is(src, r))
+
+  r.pipe(w)
+  r.push('hello')
+
+  setTimeout(() => {
+    w.on('unpipe', (src) => t.is(src, r))
+
+    r.unpipe(w)
+
+    t.ok(Readable.isPaused(r))
+
+    r.push('world')
+
+    setTimeout(() => {
+      r.pipe(w)
+      r.push('hello')
+      r.push(null)
+    })
+  })
+})

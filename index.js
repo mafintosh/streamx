@@ -281,23 +281,25 @@ class ReadableState {
     this.pipeTo = pipeTo
     this.pipeline = new Pipeline(this.stream, pipeTo, cb)
 
-    if (cb) this.stream.on('error', noop) // We already error handle this so supress crashes
+    if (isStreamx(pipeTo)) pipeTo._writableState.pipeline = this.pipeline
 
-    if (isStreamx(pipeTo)) {
-      pipeTo._writableState.pipeline = this.pipeline
-      if (cb) pipeTo.on('error', noop) // We already error handle this so supress crashes
-      pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline)) // TODO: just call finished from pipeTo itself
-    } else {
-      const onerror = this.pipeline.done.bind(this.pipeline, pipeTo)
-      const onclose = this.pipeline.done.bind(this.pipeline, pipeTo, null) // onclose has a weird bool arg
-      pipeTo.on('error', onerror)
-      pipeTo.on('close', onclose)
-      pipeTo.on('finish', this.pipeline.finished.bind(this.pipeline))
-    }
-
-    pipeTo.on('drain', afterDrain.bind(this))
     this.stream.emit('piping', pipeTo)
     pipeTo.emit('pipe', this.stream)
+  }
+
+  unpipe(dest) {
+    const pipeTo = this.pipeTo
+    if (pipeTo === null || (dest && pipeTo !== dest)) return
+
+    this._duplexState &= READ_PAUSED
+    this.pipeline._detach()
+    this.pipeline = null
+    this.pipeTo = null
+
+    if (isStreamx(pipeTo)) pipeTo._writableState.pipeline = null
+
+    this.stream.emit('unpiping', pipeTo)
+    pipeTo.emit('unpipe', this.stream)
   }
 
   push(data) {
@@ -470,6 +472,52 @@ class Pipeline {
     this.afterPipe = cb
     this.error = null
     this.pipeToFinished = false
+
+    this._detach = this._attach()
+  }
+
+  _attach() {
+    const detachStream = isStreamx(this.to) ? this._attachStreamx() : this._attachNodeStream()
+
+    if (this.afterPipe) this.from.on('error', noop) // We already error handle this so supress crashes
+
+    return () => {
+      detachStream()
+
+      if (this.afterPipe) this.from.off('error', noop)
+    }
+  }
+
+  _attachStreamx() {
+    const onfinish = this.finished.bind(this) // TODO: just call finished from pipeTo itself
+    const ondrain = afterDrain.bind(this.from._readableState)
+
+    this.to.on('finish', onfinish).on('drain', ondrain)
+
+    if (this.afterPipe) this.to.on('error', noop) // We already error handle this so supress crashes
+
+    return () => {
+      this.to.off('finish', onfinish).off('drain', ondrain)
+
+      if (this.afterPipe) this.to.off('error', noop)
+    }
+  }
+
+  _attachNodeStream() {
+    const onerror = this.done.bind(this, this.to)
+    const onclose = this.done.bind(this, this.to, null) // onclose has a weird bool arg
+    const onfinish = this.finished.bind(this)
+    const ondrain = afterDrain.bind(this.from._readableState)
+
+    this.to.on('error', onerror).on('close', onclose).on('finish', onfinish).on('drain', ondrain)
+
+    return () => {
+      this.to
+        .off('error', onerror)
+        .off('close', onclose)
+        .off('finish', onfinish)
+        .off('drain', ondrain)
+    }
   }
 
   finished() {
@@ -752,6 +800,11 @@ class Readable extends Stream {
     this._readableState.updateNextTick()
     this._readableState.pipe(dest, cb)
     return dest
+  }
+
+  unpipe(dest) {
+    this._readableState.unpipe(dest)
+    return this
   }
 
   read() {
