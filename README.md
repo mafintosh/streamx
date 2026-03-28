@@ -170,7 +170,7 @@ Can also be set using `options.open` in the constructor.
 This function is called just before the stream is fully destroyed. You should
 use this to implement whatever teardown logic you need. The final part of the
 stream life cycle is always to call destroy itself so this function will always
-be called wheather or not the stream ends gracefully or forcefully.
+be called whether or not the stream ends gracefully or forcefully.
 
 Can also be set using `options.destroy` in the constructor.
 
@@ -210,6 +210,10 @@ If none of these option are used the stream will stay paused.
 
 Returns this stream instance.
 
+#### `rs.setEncoding(encoding)`
+
+Set an encoding to change how data is interpreted. E.g. `utf-8`.
+
 #### `bool = Readable.isPaused(rs)`
 
 Returns `true` if the stream is paused, else `false`.
@@ -246,9 +250,21 @@ Emitted if any of the stream operations fail with an error. `close` is always em
 
 Emitted when the readable stream is pipeing to a destination.
 
+#### `rs.on('open')`
+
+Emitted after `rs._open(cb)` execution.
+
+#### `rs.destroying`
+
+Boolean property indicating whether or not this stream has started to be destroyed.
+
 #### `rs.destroyed`
 
-Boolean property indicating wheather or not this stream has been destroyed.
+Boolean property indicating whether or not this stream has been destroyed.
+
+#### `rs.readable`
+
+Returns `true` if the stream is an active streamx readable stream. Returns `undefined` if not.
 
 #### `bool = Readable.isBackpressured(rs)`
 
@@ -294,7 +310,7 @@ Can also be set using `options.open` in the constructor.
 This function is called just before the stream is fully destroyed. You should
 use this to implement whatever teardown logic you need. The final part of the
 stream life cycle is always to call destroy itself so this function will always
-be called wheather or not the stream ends gracefully or forcefully.
+be called whether or not the stream ends gracefully or forcefully.
 
 Can also be set using `options.destroy` in the constructor.
 
@@ -345,6 +361,14 @@ Once all writes have been fully drained `finish` will be emitted.
 
 Returns this stream instance.
 
+#### `ws.cork()`
+
+Buffer written data in memory. Useful for accumulating small chunks of data into a batch to be consumed by `writev`.
+
+#### `ws.uncork()`
+
+Disable `ws.cork()`.
+
 #### `ws._final(callback)`
 
 This function is called just before `finish` is emitted, i.e. when all writes have flushed but `ws.end()`
@@ -368,9 +392,25 @@ Emitted if any of the stream operations fail with an error. `close` is always em
 
 Emitted when a readable stream is being piped to the writable one.
 
+#### `ws.on('open')`
+
+Emitted after `ws._open(cb)` execution.
+
+#### `ws.on('drain')`
+
+Emitted after all data was drained if `ws.write(data)` returned `false`.
+
+#### `ws.destroying`
+
+Boolean property indicating whether or not this stream has started to be destroyed.
+
 #### `ws.destroyed`
 
-Boolean property indicating wheather or not this stream has been destroyed.
+Boolean property indicating whether or not this stream has been destroyed.
+
+#### `ws.writable`
+
+Returns `true` if the stream is an active streamx writable stream. Returns `undefined` if not.
 
 #### `bool = Writable.isBackpressured(ws)`
 
@@ -464,6 +504,26 @@ promise if you use this version.
 #### `bool = isStream(stream)`
 
 #### `bool = isStreamx(stream)`
+
+#### `bool = isDisturbed(stream)`
+
+Indicates if the stream has been opened or started to be destroyed.
+
+#### `bool = isEnding(stream)`
+
+Indicates if a readable stream has started it's ending process.
+
+#### `bool = isEnded(stream)`
+
+Indicates if a readable stream ended, so all it's readings.
+
+#### `bool = isFinishing(stream)`
+
+Indicates if a writable stream has started it's ending process.
+
+#### `bool = isFinished(stream)`
+
+Indicates if a writable stream ended, so all it's writings.
 
 #### `err = getStreamError(stream, [options])`
 
