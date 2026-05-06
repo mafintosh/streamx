@@ -17,6 +17,10 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
+          - os: macos-latest
+            platform: darwin
+          - os: windows-latest
+            platform: win32
     runs-on: ${{ matrix.os }}
     name: Test / ${{ matrix.platform }}
     steps:
