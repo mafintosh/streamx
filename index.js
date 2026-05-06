@@ -1,9 +1,8 @@
 const { EventEmitter } = require('events-universal')
-const STREAM_DESTROYED = new Error('Stream was destroyed')
-const PREMATURE_CLOSE = new Error('Premature close')
-
 const FIFO = require('fast-fifo')
 const TextDecoder = require('text-decoder')
+
+const StreamError = require('./lib/errors.js')
 
 // if we do a future major, expect queue microtask to be there always, for now a bit defensive
 const qmt =
@@ -532,7 +531,7 @@ function afterFinal(err) {
 function afterDestroy(err) {
   const stream = this.stream
 
-  if (!err && this.error !== STREAM_DESTROYED) err = this.error
+  if (!err && !StreamError.isStreamDestroyed(this.error)) err = this.error
   if (err) stream.emit('error', err)
   stream._duplexState |= DESTROYED
   stream.emit('close')
@@ -695,7 +694,7 @@ class Stream extends EventEmitter {
 
   destroy(err) {
     if ((this._duplexState & DESTROY_STATUS) === 0) {
-      if (!err) err = STREAM_DESTROYED
+      if (!err) err = StreamError.STREAM_DESTROYED()
       this._duplexState = (this._duplexState | DESTROYING) & NON_PRIMARY
 
       if (this._readableState !== null) {
@@ -877,9 +876,11 @@ class Readable extends Stream {
     function ondata(data) {
       if (promiseReject === null) return
       if (error) promiseReject(error)
-      else if (data === null && (stream._duplexState & READ_DONE) === 0)
-        promiseReject(STREAM_DESTROYED)
-      else promiseResolve({ value: data, done: data === null })
+      else if (data === null && (stream._duplexState & READ_DONE) === 0) {
+        promiseReject(StreamError.STREAM_DESTROYED())
+      } else {
+        promiseResolve({ value: data, done: data === null })
+      }
       promiseReject = promiseResolve = null
     }
 
@@ -1118,7 +1119,7 @@ function pipeline(stream, ...streams) {
     })
 
     if (autoDestroy) {
-      dest.on('close', () => done(error || (fin ? null : PREMATURE_CLOSE)))
+      dest.on('close', () => done(error || (fin ? null : StreamError.PREMATURE_CLOSE())))
     }
   }
 
@@ -1129,8 +1130,12 @@ function pipeline(stream, ...streams) {
     s.on('close', onclose)
 
     function onclose() {
-      if (rd && s._readableState && !s._readableState.ended) return onerror(PREMATURE_CLOSE)
-      if (wr && s._writableState && !s._writableState.ended) return onerror(PREMATURE_CLOSE)
+      if (rd && s._readableState && !s._readableState.ended) {
+        return onerror(StreamError.PREMATURE_CLOSE())
+      }
+      if (wr && s._writableState && !s._writableState.ended) {
+        return onerror(StreamError.PREMATURE_CLOSE())
+      }
     }
   }
 
@@ -1178,7 +1183,7 @@ function getStreamError(stream, opts = {}) {
     (stream._writableState && stream._writableState.error)
 
   // avoid implicit errors by default
-  return !opts.all && err === STREAM_DESTROYED ? null : err
+  return !opts.all && StreamError.isStreamDestroyed(err) ? null : err
 }
 
 function isReadStreamx(stream) {
@@ -1204,7 +1209,7 @@ function defaultByteLength(data) {
 function noop() {}
 
 function abort() {
-  this.destroy(new Error('Stream aborted.'))
+  this.destroy(StreamError.ABORTED())
 }
 
 function isWritev(s) {

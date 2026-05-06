@@ -1,5 +1,6 @@
 const test = require('brittle')
-const { Readable } = require('../')
+const { Readable, getStreamError } = require('../')
+const StreamError = require('../lib/errors')
 
 test('streams are async iterators', async function (t) {
   const data = ['a', 'b', 'c', null]
@@ -149,13 +150,17 @@ test('using abort controller', { skip: !!global.Bare }, async function (t) {
   const inc = []
   setImmediate(() => controller.abort())
 
+  let r
   await t.exception(async function () {
-    for await (const chunk of createInfinite(controller.signal)) {
+    r = createInfinite(controller.signal)
+    for await (const chunk of r) {
       inc.push(chunk)
     }
   })
 
   t.alike(inc, [0])
+  const err = getStreamError(r)
+  t.ok(StreamError.isAborted(err))
 })
 
 test('from async iterator and to async iterator', async function (t) {

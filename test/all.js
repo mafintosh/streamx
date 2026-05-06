@@ -13,6 +13,7 @@ async function runTests() {
   await import('./compat.js')
   await import('./destroy.js')
   await import('./duplex.js')
+  await import('./errors.js')
   await import('./get-stream-error.js')
   await import('./passthrough.js')
   await import('./pipe.js')
