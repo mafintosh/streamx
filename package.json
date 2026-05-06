@@ -26,9 +26,9 @@
     "lib/errors.js"
   ],
   "scripts": {
-    "format": "prettier --write .",
-    "test": "lunte && prettier --check . && node test/all.js",
-    "test:bare": "bare test/all.js"
+    "format": "prettier . --write",
+    "test": "brittle test/all.js && brittle-bare test/all.js",
+    "lint": "prettier . --check && lunte"
   },
   "repository": {
     "type": "git",
