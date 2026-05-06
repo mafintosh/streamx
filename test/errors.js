@@ -22,7 +22,7 @@ test('can make errors', async function (t) {
     const err = StreamError.ABORTED()
 
     t.is(err.code, 'ABORTED')
-    t.is(err.message, 'Stream aborted.')
+    t.is(err.message, 'Stream aborted')
     t.ok(StreamError.isAborted(err))
   }
 })
