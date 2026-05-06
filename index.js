@@ -2,7 +2,7 @@ const { EventEmitter } = require('events-universal')
 const FIFO = require('fast-fifo')
 const TextDecoder = require('text-decoder')
 
-const StreamError = require('./lib/errors')
+const StreamError = require('./lib/errors.js')
 
 // if we do a future major, expect queue microtask to be there always, for now a bit defensive
 const qmt =
