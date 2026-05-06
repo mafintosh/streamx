@@ -103,29 +103,33 @@ test('piping to a writable + promise', async function (t) {
 })
 
 test('piping errors if too few', async function (t) {
-  t.plan(4)
+  t.plan(8)
 
   try {
     pipeline(Readable.from('hello'))
   } catch (e) {
-    t.ok(StreamError.isPipelineMissing(e))
+    t.is(e.message, 'Pipeline requires at least 2 streams')
+    t.ok(StreamError.isBadArgument(e))
   }
 
   try {
     pipeline()
   } catch (e) {
-    t.ok(StreamError.isPipelineMissing(e))
+    t.is(e.message, 'Pipeline requires at least 2 streams')
+    t.ok(StreamError.isBadArgument(e))
   }
 
   try {
     await pipelinePromise(Readable.from('hello'))
   } catch (e) {
-    t.ok(StreamError.isPipelineMissing(e))
+    t.is(e.message, 'Pipeline requires at least 2 streams')
+    t.ok(StreamError.isBadArgument(e))
   }
 
   try {
     await pipelinePromise()
   } catch (e) {
-    t.ok(StreamError.isPipelineMissing(e))
+    t.is(e.message, 'Pipeline requires at least 2 streams')
+    t.ok(StreamError.isBadArgument(e))
   }
 })

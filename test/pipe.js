@@ -171,7 +171,7 @@ test('pipe continues if read is "blocked"', function (t) {
 })
 
 test('pipe errors on already used', function (t) {
-  t.plan(1)
+  t.plan(2)
 
   const r = new Readable()
   const w = new Writable()
@@ -181,6 +181,7 @@ test('pipe errors on already used', function (t) {
     r.pipe(w)
     r.pipe(w2)
   } catch (e) {
-    t.ok(StreamError.isPipeUsed(e))
+    t.is(e.message, 'Can only pipe to one destination')
+    t.ok(StreamError.isBadArgument(e))
   }
 })

@@ -27,18 +27,18 @@ test('can make errors', function (t) {
   }
 
   {
-    const err = StreamError.PIPE_USED()
+    const err = StreamError.BAD_ARGUMENT()
 
-    t.is(err.code, 'PIPE_USED')
-    t.is(err.message, 'Can only pipe to one destination')
-    t.ok(StreamError.isPipeUsed(err))
+    t.is(err.code, 'BAD_ARGUMENT')
+    t.is(err.message, 'Bad argument')
+    t.ok(StreamError.isBadArgument(err))
   }
 
   {
-    const err = StreamError.PIPELINE_MISSING()
+    const err = StreamError.BAD_ARGUMENT('Pipeline requires at least 2 streams')
 
-    t.is(err.code, 'PIPELINE_MISSING')
+    t.is(err.code, 'BAD_ARGUMENT')
     t.is(err.message, 'Pipeline requires at least 2 streams')
-    t.ok(StreamError.isPipelineMissing(err))
+    t.ok(StreamError.isBadArgument(err))
   }
 })
