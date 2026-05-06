@@ -1,5 +1,6 @@
 const test = require('brittle')
 const { Readable, getStreamError } = require('../')
+const StreamError = require('../lib/errors')
 
 test('getStreamError, no errors', function (t) {
   const stream = new Readable()
@@ -32,4 +33,5 @@ test('getStreamError, get premature destroy', function (t) {
 
   const err = getStreamError(stream, { all: true })
   t.alike(err.message, 'Stream was destroyed')
+  t.ok(StreamError.isStreamDestroyed(err))
 })
