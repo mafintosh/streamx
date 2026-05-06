@@ -1,7 +1,7 @@
 const test = require('brittle')
 const StreamError = require('../lib/errors')
 
-test('can make errors', async function (t) {
+test('can make errors', function (t) {
   {
     const err = StreamError.STREAM_DESTROYED()
 

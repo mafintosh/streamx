@@ -374,7 +374,7 @@ test('setEncoding', async function (t) {
   t.is(expected.length, 0)
 })
 
-test('setEncoding respects existing map', async function (t) {
+test('setEncoding respects existing map', function (t) {
   t.plan(1)
 
   const r = new Readable({

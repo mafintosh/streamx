@@ -17,6 +17,7 @@
     "b4a": "^1.6.6",
     "brittle": "^3.1.1",
     "end-of-stream": "^1.4.4",
+    "lunte": "^1.8.0",
     "prettier": "^3.6.2",
     "prettier-config-holepunch": "^2.0.0"
   },
@@ -26,7 +27,7 @@
   ],
   "scripts": {
     "format": "prettier --write .",
-    "test": "prettier --check . && node test/all.js",
+    "test": "lunte && prettier --check . && node test/all.js",
     "test:bare": "bare test/all.js"
   },
   "repository": {
