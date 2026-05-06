@@ -25,4 +25,20 @@ test('can make errors', function (t) {
     t.is(err.message, 'Stream aborted')
     t.ok(StreamError.isAborted(err))
   }
+
+  {
+    const err = StreamError.PIPE_USED()
+
+    t.is(err.code, 'PIPE_USED')
+    t.is(err.message, 'Can only pipe to one destination')
+    t.ok(StreamError.isPipeUsed(err))
+  }
+
+  {
+    const err = StreamError.PIPELINE_MISSING()
+
+    t.is(err.code, 'PIPELINE_MISSING')
+    t.is(err.message, 'Pipeline requires at least 2 streams')
+    t.ok(StreamError.isPipelineMissing(err))
+  }
 })
