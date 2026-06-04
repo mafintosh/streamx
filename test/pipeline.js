@@ -1,5 +1,6 @@
 const test = require('brittle')
 const { pipeline, pipelinePromise, Transform, Readable, Writable } = require('../')
+const StreamError = require('../lib/errors')
 
 test('piping to a writable', function (t) {
   t.plan(2)
@@ -99,4 +100,36 @@ test('piping to a writable + promise', async function (t) {
     })
   )
   t.ok(closed)
+})
+
+test('piping errors if too few', async function (t) {
+  t.plan(8)
+
+  try {
+    pipeline(Readable.from('hello'))
+  } catch (e) {
+    t.is(e.message, 'Pipeline requires at least 2 streams')
+    t.ok(StreamError.isBadArgument(e))
+  }
+
+  try {
+    pipeline()
+  } catch (e) {
+    t.is(e.message, 'Pipeline requires at least 2 streams')
+    t.ok(StreamError.isBadArgument(e))
+  }
+
+  try {
+    await pipelinePromise(Readable.from('hello'))
+  } catch (e) {
+    t.is(e.message, 'Pipeline requires at least 2 streams')
+    t.ok(StreamError.isBadArgument(e))
+  }
+
+  try {
+    await pipelinePromise()
+  } catch (e) {
+    t.is(e.message, 'Pipeline requires at least 2 streams')
+    t.ok(StreamError.isBadArgument(e))
+  }
 })

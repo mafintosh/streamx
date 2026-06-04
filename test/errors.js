@@ -25,4 +25,20 @@ test('can make errors', function (t) {
     t.is(err.message, 'Stream aborted')
     t.ok(StreamError.isAborted(err))
   }
+
+  {
+    const err = StreamError.BAD_ARGUMENT()
+
+    t.is(err.code, 'BAD_ARGUMENT')
+    t.is(err.message, 'Bad argument')
+    t.ok(StreamError.isBadArgument(err))
+  }
+
+  {
+    const err = StreamError.BAD_ARGUMENT('Pipeline requires at least 2 streams')
+
+    t.is(err.code, 'BAD_ARGUMENT')
+    t.is(err.message, 'Pipeline requires at least 2 streams')
+    t.ok(StreamError.isBadArgument(err))
+  }
 })

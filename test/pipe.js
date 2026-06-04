@@ -1,6 +1,7 @@
 const test = require('brittle')
 const compat = global.Bare ? null : require('stream')
 const { Readable, Writable } = require('../')
+const StreamError = require('../lib/errors')
 
 test('pipe to node stream', { skip: !compat }, function (t) {
   t.plan(3)
@@ -166,5 +167,21 @@ test('pipe continues if read is "blocked"', function (t) {
 
   function done() {
     t.is(written, read)
+  }
+})
+
+test('pipe errors on already used', function (t) {
+  t.plan(2)
+
+  const r = new Readable()
+  const w = new Writable()
+  const w2 = new Writable()
+
+  try {
+    r.pipe(w)
+    r.pipe(w2)
+  } catch (e) {
+    t.is(e.message, 'Can only pipe to one destination')
+    t.ok(StreamError.isBadArgument(e))
   }
 })
