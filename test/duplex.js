@@ -26,11 +26,11 @@ test('Using both mapReadable and mapWritable to map data', function (t) {
   const d = new Duplex({
     write(data, cb) {
       d.push(data)
-      cb()
+      cb(null)
     },
     final(cb) {
       d.push(null)
-      cb()
+      cb(null)
     },
     mapReadable: (num) => JSON.stringify({ num }),
     mapWritable: (input) => parseInt(input, 10)
@@ -52,7 +52,7 @@ test('wait for readable', function (t) {
     read(cb) {
       d.push('ok')
       d.push(null)
-      cb()
+      cb(null)
     }
   })
 

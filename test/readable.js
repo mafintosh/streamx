@@ -277,7 +277,7 @@ test('resume a stalled stream', function (t) {
         once = false
         this.push('data')
         expected.push('data')
-        return cb()
+        return cb(null)
       }
 
       for (let i = 0; i < 20; i++) {
@@ -315,7 +315,7 @@ test('no read-ahead with pause/resume', function (t) {
     highWaterMark: 0,
     read(cb) {
       this.push('tick: ' + ++tick)
-      cb()
+      cb(null)
     }
   })
 
@@ -344,7 +344,7 @@ test('no read-ahead with async iterator', async function (t) {
     read(cb) {
       this.push('tick: ' + ++tick)
       if (tick === 10) this.push(null)
-      cb()
+      cb(null)
     }
   })
 

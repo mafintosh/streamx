@@ -4,9 +4,15 @@
   "description": "An iteration of the Node.js core streams with a series of improvements",
   "main": "index.js",
   "exports": {
-    ".": "./index.js",
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
     "./package": "./package.json",
-    "./errors": "./lib/errors"
+    "./errors": {
+      "types": "./lib/errors.d.ts",
+      "default": "./lib/errors"
+    }
   },
   "dependencies": {
     "events-universal": "^1.0.0",
@@ -23,7 +29,9 @@
   },
   "files": [
     "index.js",
-    "lib/errors.js"
+    "index.d.ts",
+    "runtime.d.ts",
+    "lib"
   ],
   "scripts": {
     "format": "prettier . --write",

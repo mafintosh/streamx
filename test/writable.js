@@ -112,7 +112,7 @@ test('map written data', function (t) {
   const r = new Writable({
     write(data, cb) {
       t.is(data, '{"foo":1}')
-      cb()
+      cb(null)
     },
     map: (input) => JSON.stringify(input)
   })
@@ -129,7 +129,7 @@ test('use mapWritable to map data', function (t) {
   const r = new Writable({
     write(data, cb) {
       t.is(data, '{"foo":1}')
-      cb()
+      cb(null)
     },
     map: () => t.fail('.mapWritable has priority'),
     mapWritable: (input) => JSON.stringify(input)
@@ -267,7 +267,7 @@ test('drained helper, inflight write', async function (t) {
       setImmediate(() => {
         setImmediate(() => {
           writing = false
-          cb()
+          cb(null)
         })
       })
     }
@@ -295,7 +295,7 @@ test('drained helper, writev', async function (t) {
       continueWrite()
       setImmediate(() => {
         writing -= datas.length
-        cb()
+        cb(null)
       })
     }
   })
@@ -316,7 +316,7 @@ test('drained helper, writev', async function (t) {
 test('drained helper, writev, already flushed', async function (t) {
   const w = new Writable({
     writev(datas, cb) {
-      cb()
+      cb(null)
     }
   })
 

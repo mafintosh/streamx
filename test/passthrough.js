@@ -12,7 +12,7 @@ test('passthrough', (t) => {
       if (i === 1) t.is(data, 'foo')
       else if (i === 2) t.is(data, 'bar')
       else t.fail('too many messages')
-      cb()
+      cb(null)
     }
   })
   w.on('finish', () => t.pass('finished'))

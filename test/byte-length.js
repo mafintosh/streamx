@@ -43,6 +43,7 @@ test('byteLength receives readable item', function (t) {
   const r = new Readable({
     byteLength: (data) => {
       t.alike(obj, data)
+      return 1
     }
   })
   r.push(obj)

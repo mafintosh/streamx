@@ -10,7 +10,7 @@ test('piping to a writable', function (t) {
     new Writable({
       write(data, cb) {
         t.is(data, 'hello')
-        cb()
+        cb(null)
       }
     })
   )
@@ -37,7 +37,7 @@ test('piping with final callback', function (t) {
     new Writable({
       write(data, cb) {
         t.is(data, 'hello')
-        cb()
+        cb(null)
       }
     }),
     () => t.pass('ended')
@@ -53,13 +53,13 @@ test('piping with transform stream inbetween', function (t) {
       new Transform({
         transform(input, cb) {
           this.push(input.length)
-          cb()
+          cb(null)
         }
       }),
       new Writable({
         write(data, cb) {
           t.is(data, 5)
-          cb()
+          cb(null)
         }
       })
     ],
@@ -75,7 +75,7 @@ test('piping to a writable', function (t) {
     new Writable({
       write(data, cb) {
         t.is(data, 'hello')
-        cb()
+        cb(null)
       }
     })
   )
@@ -95,7 +95,7 @@ test('piping to a writable + promise', async function (t) {
     new Writable({
       write(data, cb) {
         t.is(data, 'hello')
-        cb()
+        cb(null)
       }
     })
   )
