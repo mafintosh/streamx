@@ -78,7 +78,7 @@ interface Writable<M extends WritableEvents = WritableEvents> extends Stream<M> 
   _writev(batch: unknown[], cb: StreamCallback): void
   _final(cb: StreamCallback): void
 
-  write(data: unknown): unknown
+  write(data: unknown): boolean
 
   end(data: unknown): this
 
@@ -119,7 +119,7 @@ interface Readable<M extends ReadableEvents = ReadableEvents>
   resume(): this
   pause(): this
 
-  pipe<S extends Writable>(dest: S, cb?: StreamCallback): S
+  pipe<S>(dest: S, cb?: StreamCallback): S
 
   setEncoding(encoding: BufferEncoding): this
 }
