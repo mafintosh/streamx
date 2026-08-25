@@ -40,16 +40,16 @@ interface EventEmitter<in out M extends EventMap = EventMap> {
 
   emit<E extends keyof M>(name: E, ...args: M[E]): boolean
 
-  listeners<E extends keyof M, R>(name: E): EventHandler<M[E], R>
+  listeners<E extends keyof M, R>(name: E): EventHandler<M[E], R>[]
 
   rawListeners<E extends keyof M, R>(name: E): EventHandler<M[E], R>[]
 
-  eventNames(): (keyof M)[]
+  eventNames(): (string | symbol)[]
 
   listenerCount<E extends keyof M>(name: E): number
 
   getMaxListeners(): number
-  setMaxListeners(n: number): void
+  setMaxListeners(n: number): this
 }
 
 export { BufferEncoding, EventMap, EventEmitter }
