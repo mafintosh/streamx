@@ -1137,7 +1137,11 @@ class Transform extends Duplex {
   }
 }
 
-class PassThrough extends Transform {}
+class PassThrough extends Transform {
+  constructor(opts) {
+    super(opts)
+  }
+}
 
 function transformAfterFlush(err, data) {
   const cb = this._transformState.afterFinal
