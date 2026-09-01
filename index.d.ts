@@ -80,7 +80,7 @@ interface Writable<M extends WritableEvents = WritableEvents> extends Stream<M> 
 
   write(data: unknown): boolean
 
-  end(data: unknown): this
+  end(data?: unknown): this
 
   cork(): void
   uncork(): void
