@@ -374,6 +374,104 @@ test('setEncoding', async function (t) {
   t.is(expected.length, 0)
 })
 
+test('setEncoding flushes incomplete UTF-8 at end', async function (t) {
+  for (const text of ['ø', '€', '🦄']) {
+    const character = b4a.from(text)
+    for (let length = 1; length < character.byteLength; length++) {
+      const input = b4a.concat([b4a.from('prefix '), character.subarray(0, length)])
+      for (const split of [false, true]) {
+        const r = new Readable({ encoding: 'utf8' })
+        if (split) {
+          for (const byte of input) r.push(b4a.from([byte]))
+        } else {
+          r.push(input)
+        }
+        r.push(null)
+
+        let actual = ''
+        for await (const chunk of r) actual += chunk
+        t.is(actual, b4a.toString(input), `${text}, ${length} bytes, split: ${split}`)
+      }
+    }
+  }
+})
+
+test('setEncoding keeps the final decoded chunk queued while paused', async function (t) {
+  const r = new Readable({ encoding: 'utf8', highWaterMark: 1 })
+  const chunks = []
+  let ended = false
+  const closed = new Promise((resolve) => r.once('close', resolve))
+
+  r.on('data', function (chunk) {
+    chunks.push(chunk)
+    if (chunks.length === 1) r.pause()
+  })
+  r.on('end', () => (ended = true))
+
+  r.push(b4a.from('prefix'))
+  r.push(b4a.from([0xe2, 0x82]))
+  r.push(null)
+  await nextImmediate()
+
+  t.alike(chunks, ['prefix'])
+  t.absent(ended, 'end waits for the queued replacement character')
+  r.resume()
+  await closed
+  t.alike(chunks, ['prefix', '\ufffd'])
+  t.ok(ended)
+})
+
+test('setEncoding maps the final decoded chunk once', async function (t) {
+  const mapped = []
+  const r = new Readable({
+    encoding: 'utf8',
+    map(chunk) {
+      mapped.push(chunk)
+      return { text: chunk }
+    }
+  })
+  r.push(b4a.from([0xf0, 0x9f, 0xa6]))
+  r.push(null)
+  r.push(null)
+
+  const chunks = []
+  for await (const chunk of r) chunks.push(chunk)
+  t.alike(chunks, [{ text: '\ufffd' }])
+  t.alike(mapped, ['\ufffd'])
+})
+
+test('setEncoding can skip the final decoded chunk through map', async function (t) {
+  const mapped = []
+  const r = new Readable({
+    encoding: 'utf8',
+    map(chunk) {
+      mapped.push(chunk)
+      return null
+    }
+  })
+  r.push(b4a.from([0xc3]))
+  r.push(null)
+
+  const chunks = []
+  for await (const chunk of r) chunks.push(chunk)
+  t.alike(chunks, [])
+  t.alike(mapped, ['\ufffd'])
+})
+
+test('setEncoding does not flush pending bytes when destroyed', async function (t) {
+  const r = new Readable({ encoding: 'utf8' })
+  const chunks = []
+  let ended = false
+  const closed = new Promise((resolve) => r.once('close', resolve))
+  r.on('data', (chunk) => chunks.push(chunk))
+  r.on('end', () => (ended = true))
+  r.push(b4a.from([0xe2, 0x82]))
+  r.destroy()
+  await closed
+  t.alike(chunks, [])
+  t.absent(ended)
+})
+
 test('setEncoding respects existing map', function (t) {
   t.plan(1)
 

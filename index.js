@@ -266,6 +266,7 @@ class ReadableState {
     this.pipeline = null
     this.byteLength = byteLengthReadable || byteLength || defaultByteLength
     this.map = mapReadable || map
+    this.decoder = null
     this.pipeTo = null
     this.afterRead = afterRead.bind(this)
     this.afterUpdateNextTick = updateReadNT.bind(this)
@@ -310,6 +311,10 @@ class ReadableState {
     const stream = this.stream
 
     if (data === null) {
+      if (this.decoder !== null) {
+        const final = this.decoder.end()
+        if (final !== '') this.push(final)
+      }
       this.highWaterMark = 0
       stream._duplexState = (stream._duplexState | READ_ENDING) & READ_NON_PRIMARY_AND_PUSHED
       return false
@@ -807,6 +812,7 @@ class Readable extends Stream {
   setEncoding(encoding) {
     const dec = new TextDecoder(encoding)
     const map = this._readableState.map || echo
+    this._readableState.decoder = dec
     this._readableState.map = mapOrSkip
     return this
 
