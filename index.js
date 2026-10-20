@@ -343,16 +343,18 @@ class ReadableState {
   }
 
   unshift(data) {
-    const pending = [this.map !== null ? this.map(data) : data]
-    while (this.buffered > 0) pending.push(this.shift())
-
-    for (let i = 0; i < pending.length - 1; i++) {
-      const data = pending[i]
-      this.buffered += this.byteLength(data)
-      this.queue.push(data)
+    if (data === null) {
+      this.push(null)
+      return
     }
 
-    this.push(pending[pending.length - 1])
+    const size = this.byteLength(data)
+    const pending = this.queue.length
+    this.queue.push(data)
+    for (let i = 0; i < pending; i++) this.queue.push(this.queue.shift())
+
+    this.buffered += size
+    this.stream._duplexState = (this.stream._duplexState | READ_QUEUED) & READ_PUSHED
   }
 
   read() {

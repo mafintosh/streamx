@@ -1,6 +1,6 @@
 const test = require('brittle')
 const b4a = require('b4a')
-const { Readable, isDisturbed } = require('../')
+const { Readable, Writable, isDisturbed } = require('../')
 
 test('ondata', function (t) {
   t.plan(4)
@@ -198,6 +198,166 @@ test('unshift', async function (t) {
     inc.push(entry)
   }
   t.alike(inc, [0, 1, 2])
+})
+
+for (const queued of [0, 1, 33]) {
+  test('unshift returns mapped data with ' + queued + ' queued chunks', async function (t) {
+    const mapped = []
+    const r = new Readable({
+      map(data) {
+        mapped.push(data)
+        return JSON.parse(data)
+      }
+    })
+    const input = Array.from({ length: queued + 1 }, (_, id) => JSON.stringify({ id }))
+    for (const data of input) r.push(data)
+
+    r.read()
+    await nextImmediate()
+    const first = r.read()
+    t.alike(first, { id: 0 })
+    r.unshift(first)
+    r.push(null)
+
+    const output = []
+    for await (const data of r) output.push(data)
+    t.is(output[0], first, 'the returned object retains its identity')
+    t.alike(output, input.map(JSON.parse), 'all queued data retains its order')
+    t.alike(mapped, input, 'each input is mapped only once')
+  })
+}
+
+test('unshift bypasses a map that skips input', async function (t) {
+  const mapped = []
+  const r = new Readable({
+    map(data) {
+      mapped.push(data)
+      return null
+    }
+  })
+  const returned = { id: 1 }
+  r.push('skipped')
+  r.unshift(returned)
+  r.push(null)
+
+  const output = []
+  for await (const data of r) output.push(data)
+  t.alike(output, [returned])
+  t.is(output[0], returned)
+  t.alike(mapped, ['skipped'])
+})
+
+test('unshift leaves an incomplete decoder sequence untouched', async function (t) {
+  const r = new Readable({ encoding: 'utf-8' })
+  const buffer = b4a.from('🦄')
+  r.push(b4a.from('hello'))
+  r.push(buffer.subarray(0, 2))
+  r.read()
+  await nextImmediate()
+  const first = r.read()
+  t.is(first, 'hello')
+  r.unshift(first)
+  r.push(buffer.subarray(2))
+  r.push(null)
+
+  const output = []
+  for await (const data of r) output.push(data)
+  t.alike(output, ['hello', '🦄'])
+})
+
+test('unshift accounts for mapped object byte lengths', async function (t) {
+  const mapped = []
+  const r = new Readable({
+    highWaterMark: 5,
+    map(size) {
+      mapped.push(size)
+      return { size }
+    },
+    byteLength(data) {
+      return data.size
+    }
+  })
+  r.push(3)
+  r.push(4)
+  r.read()
+  await nextImmediate()
+
+  t.ok(Readable.isBackpressured(r))
+  const first = r.read()
+  t.absent(Readable.isBackpressured(r))
+  r.unshift(first)
+  t.ok(Readable.isBackpressured(r))
+  t.is(r.read(), first)
+  t.absent(Readable.isBackpressured(r))
+  t.alike(r.read(), { size: 4 })
+  t.absent(Readable.isBackpressured(r))
+  t.alike(mapped, [3, 4])
+  r.push(null)
+  r.resume()
+})
+
+test('unshift preserves mapped chunks when piping', async function (t) {
+  const mapped = []
+  const r = new Readable({
+    map(data) {
+      mapped.push(data)
+      return data + 10
+    }
+  })
+  r.push(1)
+  r.push(2)
+  r.unshift(0)
+  r.push(null)
+
+  const output = []
+  const w = new Writable({
+    highWaterMark: 1,
+    write(data, cb) {
+      output.push(data)
+      setImmediate(cb)
+    }
+  })
+  await new Promise((resolve, reject) => {
+    r.pipe(w, (err) => (err ? reject(err) : resolve()))
+  })
+  t.alike(output, [0, 11, 12])
+  t.alike(mapped, [1, 2])
+})
+
+for (const queued of [false, true]) {
+  test(
+    'unshift leaves queued data intact if byteLength throws, queued=' + queued,
+    async function (t) {
+      const error = new Error('bad chunk')
+      const r = new Readable({
+        highWaterMark: 5,
+        byteLength(data) {
+          if (data.bad) throw error
+          return data.size
+        }
+      })
+      const first = { size: 3 }
+      const last = { size: 4 }
+      if (queued) r.push(first)
+      await t.exception(() => r.unshift({ bad: true }), error)
+      t.absent(Readable.isBackpressured(r))
+      r.push(last)
+      t.is(Readable.isBackpressured(r), queued)
+      r.push(null)
+
+      const output = []
+      for await (const data of r) output.push(data)
+      t.alike(output, queued ? [first, last] : [last])
+    }
+  )
+}
+
+test('unshift null ends an empty readable without mapping', async function (t) {
+  const r = new Readable({ map: () => t.fail('null is not mapped') })
+  r.unshift(null)
+  const output = []
+  for await (const data of r) output.push(data)
+  t.alike(output, [])
 })
 
 test('from readable should return the original readable', function (t) {
