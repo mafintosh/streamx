@@ -821,6 +821,9 @@ class Readable extends Stream {
   }
 
   pipe(dest, cb) {
+    if (cb !== undefined && cb !== null && typeof cb !== 'function') {
+      throw StreamError.BAD_ARGUMENT('Callback must be a function')
+    }
     this._readableState.updateNextTick()
     this._readableState.pipe(dest, cb)
     return dest

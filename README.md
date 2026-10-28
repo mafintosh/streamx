@@ -223,6 +223,8 @@ Returns `true` if the stream is paused, else `false`.
 Efficently pipe the readable stream to a writable stream (can be Node.js core stream or a stream from this package).
 If you provide a callback the callback is called when the pipeline has fully finished with an optional error in case
 it failed.
+The callback must be a function, `null`, or `undefined`. Other values, including Node.js-style pipe options
+such as `{ end: false }`, throw a `BAD_ARGUMENT` error before piping starts.
 
 To cancel the pipeline destroy either of the streams.
 

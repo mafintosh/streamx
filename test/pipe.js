@@ -185,3 +185,93 @@ test('pipe errors on already used', function (t) {
     t.ok(StreamError.isBadArgument(e))
   }
 })
+
+test('pipe rejects options before attaching or opening', async function (t) {
+  let opened = 0
+  let piping = 0
+  const written = []
+  const r = new Readable({
+    open(cb) {
+      opened++
+      cb(null)
+    }
+  })
+  const w = new Writable({
+    write(data, cb) {
+      written.push(data)
+      cb(null)
+    }
+  })
+
+  r.on('error', () => {})
+  w.on('error', () => {})
+  r.on('piping', () => piping++)
+
+  let error
+  try {
+    r.pipe(w, { end: false })
+  } catch (err) {
+    error = err
+  }
+
+  t.ok(StreamError.isBadArgument(error))
+  t.is(error && error.message, 'Callback must be a function')
+
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  t.is(opened, 0)
+  t.is(piping, 0)
+
+  if (!error) {
+    r.destroy()
+    w.destroy()
+    return
+  }
+
+  const finished = new Promise((resolve) => w.on('finish', resolve))
+  t.is(r.pipe(w), w)
+  r.push('payload')
+  r.push(null)
+  await finished
+  t.alike(written, ['payload'])
+})
+
+test('pipe rejects invalid callbacks', function (t) {
+  for (const callback of [{}, [], false, 0, 'callback']) {
+    const r = new Readable()
+    const w = new Writable()
+    r.on('error', () => {})
+    w.on('error', () => {})
+
+    let error
+    try {
+      r.pipe(w, callback)
+    } catch (err) {
+      error = err
+    }
+
+    t.ok(StreamError.isBadArgument(error))
+    t.is(error && error.message, 'Callback must be a function')
+    r.destroy()
+    w.destroy()
+  }
+})
+
+test('pipe accepts null and undefined callbacks', async function (t) {
+  for (const callback of [null, undefined]) {
+    const written = []
+    const r = new Readable()
+    const w = new Writable({
+      write(data, cb) {
+        written.push(data)
+        cb(null)
+      }
+    })
+    const finished = new Promise((resolve) => w.on('finish', resolve))
+
+    t.is(r.pipe(w, callback), w)
+    r.push('payload')
+    r.push(null)
+    await finished
+    t.alike(written, ['payload'])
+  }
+})
