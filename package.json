@@ -11,7 +11,7 @@
     "./package": "./package.json",
     "./errors": {
       "types": "./lib/errors.d.ts",
-      "default": "./lib/errors"
+      "default": "./lib/errors.js"
     }
   },
   "dependencies": {
